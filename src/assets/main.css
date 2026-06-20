@@ -1,0 +1,13 @@
+/* 全局样式 - 移除 Vite 默认布局约束 */
+/* 具体页面布局由各页面组件自行管理 */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+}

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p d:/SRM/frontend/src/views/user)"
+    ],
+    "additionalDirectories": [
+      "d:\\SRM\\frontend\\src\\views"
+    ]
+  }
+}
