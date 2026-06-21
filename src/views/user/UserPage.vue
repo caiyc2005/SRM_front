@@ -211,9 +211,38 @@ async function submitRole() {
 }
 
 
+function handleToggleRoleStatus(row) {
+  const isDel = row.isDel
+  const title = isDel ? '启用角色' : '禁用角色'
+  const message = isDel
+    ? `确定要启用角色「${row.roleName}」吗？`
+    : `确定要禁用角色「${row.roleName}」吗？`
+  const btnText = isDel ? '确定启用' : '确定禁用'
+
+  ElMessageBox.confirm(message, title, {
+    type: 'warning',
+    confirmButtonText: btnText
+  }).then(async () => {
+    try {
+      const res = await apiPut('UpdateRoleStatus', {
+        roleId: row.roleId || row.roleID,
+        isDel: !isDel
+      })
+      if (res.success) {
+        ElMessage.success(isDel ? '角色已启用' : '角色已禁用')
+        await loadRoles()
+      } else {
+        ElMessage.error(res.message || '操作失败')
+      }
+    } catch (err) {
+      ElMessage.error('请求失败：' + err.message)
+    }
+  }).catch(() => {})
+}
+
 function handleDeleteRole(row) {
   ElMessageBox.confirm(
-    `确定要删除角色「${row.roleName}」吗？\n如果该角色下有关联用户，将无法删除。`,
+    `确定要删除角色「${row.roleName}」吗？\n该操作会将角色标记为已删除。`,
     '删除角色',
     { type: 'warning', confirmButtonText: '确定删除' }
   ).then(async () => {
@@ -480,12 +509,15 @@ onMounted(() => {
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="200" align="center">
+                <el-table-column label="操作" width="280" align="center">
                   <template #default="{ row }">
                     <el-button type="primary" link size="small" @click="openRoleUsersDialog(row)">
                       查看用户
                     </el-button>
-                    <el-button type="danger" link size="small" @click="handleDeleteRole(row)">
+                    <!-- <el-button :type="row.isDel ? 'success' : 'danger'" link size="small" @click="handleToggleRoleStatus(row)">
+                      {{ row.isDel ? '启用' : '禁用' }}
+                    </el-button> -->
+                    <el-button :disabled="!row.isDel" type="danger" link size="small" @click="handleDeleteRole(row)">
                       删除
                     </el-button>
                   </template>
