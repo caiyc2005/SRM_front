@@ -7,6 +7,7 @@
 
 export {
   DEFAULT_SUPPLIERS,
+  DEFAULT_MATERIALS,
   initMockOrders,
   deliverySeq
 } from './orderData.js'

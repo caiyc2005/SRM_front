@@ -17,14 +17,18 @@ import CreateOrderDialog from './CreateOrderDialog.vue'
 
 import { getStatusText, getStatusTag, generateOrderNo, generateDeliveryNo, formatNow } from '@/utils/orderUtils'
 
-import { DEFAULT_SUPPLIERS, initMockOrders, deliverySeq as mockDeliverySeq } from '@/mock'
+import { DEFAULT_SUPPLIERS, DEFAULT_MATERIALS, initMockOrders, deliverySeq as mockDeliverySeq } from '@/mock'
+
+// ============ API 基础路径 ============
+const API_BASE = '/api/Orders'
 
 // ============ 数据状态 ============
 const supplierList = ref([...DEFAULT_SUPPLIERS])
+const materialList = ref([])
 
 const query = reactive({
-  orderNo: '',
-  supplierId: '',
+  orderCode: '',
+  supplierID: '',
   status: '',
   pageNum: 1,
   pageSize: 10
@@ -54,8 +58,8 @@ const orderStatusOptions = [
 ]
 const orderFilterFields = computed(() => {
   const fields = [
-    { key: 'orderNo', label: '订单编号', type: 'input', width: 220 },
-    { key: 'supplierId', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'name', valueKey: 'id' }
+    { key: 'orderCode', label: '订单编号', type: 'input', width: 220 },
+    { key: 'supplierID', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'supplierName', valueKey: 'supplierID' }
   ]
   if (!isPendingMode()) {
     fields.push({ key: 'status', label: '订单状态', type: 'select', width: 180, options: orderStatusOptions })
@@ -66,7 +70,7 @@ const orderFilterFields = computed(() => {
 // 创建订单弹窗
 const createDialogVisible = ref(false)
 const createForm = reactive({
-  supplierId: '',
+  supplierID: '',
   materials: [],
   deliveryDate: '',
   remark: ''
@@ -75,8 +79,8 @@ const createForm = reactive({
 // ============ 计算属性 ============
 const filteredData = computed(() => {
   let data = [...mockData.value]
-  if (query.orderNo) data = data.filter(item => item.orderNo.includes(query.orderNo))
-  if (query.supplierId) data = data.filter(item => item.supplierId === query.supplierId)
+  if (query.orderCode) data = data.filter(item => item.orderCode.includes(query.orderCode))
+  if (query.supplierID) data = data.filter(item => item.supplierID === query.supplierID)
   if (query.status) data = data.filter(item => item.status === query.status)
   return data
 })
@@ -99,8 +103,8 @@ function handleQuery() {
 }
 
 function handleReset() {
-  query.orderNo = ''
-  query.supplierId = ''
+  query.orderCode = ''
+  query.supplierID = ''
   query.status = ''
   query.pageNum = 1
   loadTable()
@@ -114,7 +118,7 @@ function handleExport() {
   }
 
   const exportList = data.map(item => ({
-    '订单编号': item.orderNo,
+    '订单编号': item.orderCode,
     '供应商名称': item.supplierName,
     '订单状态': getStatusText(item.status),
     '物料种类': item.materialCount,
@@ -133,17 +137,35 @@ function handleExport() {
   ElMessage.success('导出成功')
 }
 
+// ============ 获取物料列表 ============
+async function loadMaterials() {
+  try {
+    const res = await fetch('/api/Materials/GetAll', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+    if (result.success && result.data?.length) {
+      materialList.value = result.data
+      return
+    }
+  } catch {
+    // 静默失败，降级到模拟数据
+  }
+  materialList.value = [...DEFAULT_MATERIALS]
+}
+
 // ============ 创建订单 ============
 function openCreateDialog() {
-  createForm.supplierId = ''
-  createForm.materials = [{ materialCode: '', materialName: '', quantity: 1, price: 0 }]
+  createForm.supplierID = ''
+  createForm.materials = [{ materialID: '', qty: 1, unitPrice: 0 }]
   createForm.deliveryDate = ''
   createForm.remark = ''
   createDialogVisible.value = true
 }
 
 function addMaterial() {
-  createForm.materials.push({ materialCode: '', materialName: '', quantity: 1, price: 0 })
+  createForm.materials.push({ materialID: '', qty: 1, unitPrice: 0 })
 }
 
 function removeMaterial(index) {
@@ -154,67 +176,111 @@ function removeMaterial(index) {
   createForm.materials.splice(index, 1)
 }
 
-function submitCreateOrder() {
-  if (!createForm.supplierId) {
+async function submitCreateOrder() {
+  if (!createForm.supplierID) {
     ElMessage.warning('请选择供应商')
     return
   }
 
   const validMaterials = createForm.materials.filter(
-    item => item.materialCode.trim() && item.materialName.trim() && item.quantity > 0 && item.price > 0
+    item => item.materialID && item.qty > 0 && item.unitPrice > 0
   )
   if (validMaterials.length === 0) {
     ElMessage.warning('请完善至少一行有效物料信息')
     return
   }
 
+  const supplier = supplierList.value.find(s => s.supplierID === createForm.supplierID)
+
+  const orderData = {
+    SupplierID: String(createForm.supplierID),
+    SupplierName: supplier ? supplier.supplierName : '',
+    Materials: validMaterials.map(item => ({
+      MaterialID: item.materialID,
+      Qty: item.qty,
+      UnitPrice: Number(item.unitPrice.toFixed(2))
+    })),
+    Memo: createForm.remark || ''
+  }
+
+  console.log('发送到后端的订单数据:', JSON.stringify(orderData, null, 2))
+
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_BASE}/CreateOrder`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify(orderData)
+    })
+    const text = await res.text()
+    let result
+    try {
+      result = text ? JSON.parse(text) : { success: false, message: '响应内容为空' }
+    } catch {
+      result = { success: false, message: text || '响应格式错误' }
+    }
+
+    if (result.success) {
+      ElMessage.success('采购订单创建成功（后端）')
+    } else {
+      ElMessage.error(result.message || `请求失败(${res.status})`)
+      console.error('后端返回错误:', result)
+      return
+    }
+  } catch (err) {
+    ElMessage.error('后端连接失败：' + err.message + '，请确认后端服务已启动')
+    return
+  }
+
+  // 后端创建成功后，同步添加到本地 mock 列表以便显示
   let totalAmount = 0
   const materials = validMaterials.map((item, index) => {
-    const amount = (item.quantity * item.price).toFixed(2)
+    const amount = (item.qty * item.unitPrice).toFixed(2)
     totalAmount += Number(amount)
+    const mat = materialList.value.find(m => (m.materialID || m.materialCode) === item.materialID)
     return {
       index: index + 1,
-      materialCode: item.materialCode.trim(),
-      materialName: item.materialName.trim(),
+      materialID: item.materialID,
+      materialCode: mat?.materialCode || item.materialID,
+      materialName: mat?.materialName || item.materialID,
       spec: '标准规格',
-      quantity: item.quantity,
-      price: item.price.toFixed(2),
+      qty: item.qty,
+      unitPrice: item.unitPrice.toFixed(2),
       amount
     }
   })
 
-  const newId = mockData.value.length + 1
-  const supplier = supplierList.value.find(s => s.id === createForm.supplierId)
-
   const newOrder = {
-    id: newId,
-    orderNo: generateOrderNo(),
-    supplierId: createForm.supplierId,
-    supplierName: supplier ? supplier.name : '',
+    orderID: String(mockData.value.length + 1),
+    orderCode: generateOrderNo(),
+    supplierID: createForm.supplierID,
+    supplierName: supplier ? supplier.supplierName : '',
     status: '0',
     materialCount: materials.length,
     totalAmount: totalAmount.toFixed(2),
     deliveryDate: createForm.deliveryDate || '2024-07-30',
     createTime: formatNow(),
     materials,
-    remark: createForm.remark || '',
+    memo: createForm.remark || '',
     deliveryNo: ''
   }
 
   mockData.value.unshift(newOrder)
   loadTable()
   createDialogVisible.value = false
-  ElMessage.success('采购订单创建成功，状态为「待确认」')
 }
 
 // ============ 订单操作 ============
 function handleConfirm(row) {
   ElMessageBox.confirm(
-    `确认要将订单 ${row.orderNo} 标记为「已确认」状态吗？确认后将不可撤回。`,
+    `确认要将订单 ${row.orderCode} 标记为「已确认」状态吗？确认后将不可撤回。`,
     '订单确认操作',
     { type: 'warning' }
   ).then(() => {
-    const targetOrder = mockData.value.find(item => item.id === row.id)
+    const targetOrder = mockData.value.find(item => item.orderID === row.orderID)
     if (targetOrder) targetOrder.status = '1'
     ElMessage.success('订单确认成功，状态已更新为「已确认」')
     loadTable()
@@ -223,11 +289,11 @@ function handleConfirm(row) {
 
 function handleGenerateDelivery(row) {
   ElMessageBox.confirm(
-    `确认要为订单 ${row.orderNo} 生成送货单吗？生成后订单状态将更新为「待发货」。`,
+    `确认要为订单 ${row.orderCode} 生成送货单吗？生成后订单状态将更新为「待发货」。`,
     '生成送货单',
     { type: 'warning', confirmButtonText: '确认生成' }
   ).then(() => {
-    const targetOrder = mockData.value.find(item => item.id === row.id)
+    const targetOrder = mockData.value.find(item => item.orderID === row.orderID)
     if (targetOrder) {
       const newDeliveryNo = generateDeliveryNo(deliverySeq.value)
       deliverySeq.value++
@@ -243,6 +309,7 @@ function handleGenerateDelivery(row) {
 onMounted(() => {
   mockData.value = initMockOrders(supplierList.value)
   loadTable()
+  loadMaterials()
 })
 
 watch(
@@ -292,6 +359,7 @@ watch(() => route.path, () => {
     <CreateOrderDialog
       :visible="createDialogVisible"
       :supplier-list="supplierList"
+      :material-list="materialList"
       :form-data="createForm"
       @update:visible="createDialogVisible = $event"
       @add-material="addMaterial"

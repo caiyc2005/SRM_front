@@ -22,13 +22,13 @@ const emit = defineEmits(['pageChange', 'confirm', 'generateDelivery'])
       <span>共 {{ total }} 条记录</span>
     </div>
 
-    <el-table :data="tableData" row-key="id" border style="width: 100%">
+    <el-table :data="tableData" row-key="orderID" border style="width: 100%">
       <!-- 展开订单详情 -->
       <el-table-column type="expand">
         <template #default="props">
           <div class="detail-content">
             <div class="detail-info">
-              <div><span>订单编号：</span><b>{{ props.row.orderNo }}</b></div>
+              <div><span>订单编号：</span><b>{{ props.row.orderCode }}</b></div>
               <div><span>供应商：</span><b>{{ props.row.supplierName }}</b></div>
               <div><span>订单状态：</span><b>{{ getStatusText(props.row.status) }}</b></div>
               <div><span>总金额：</span><b class="red-price">¥{{ props.row.totalAmount }}</b></div>
@@ -44,15 +44,15 @@ const emit = defineEmits(['pageChange', 'confirm', 'generateDelivery'])
               <el-table-column prop="materialCode" label="物料编码" width="120" align="center" />
               <el-table-column prop="materialName" label="物料名称" width="180" align="center" />
               <el-table-column prop="spec" label="规格" width="120" align="center" />
-              <el-table-column prop="quantity" label="采购数量" align="center" />
-              <el-table-column prop="price" label="单价" align="center" />
+              <el-table-column prop="qty" label="采购数量" align="center" />
+              <el-table-column prop="unitPrice" label="单价" align="center" />
               <el-table-column prop="amount" label="金额" align="center" />
             </el-table>
           </div>
         </template>
       </el-table-column>
 
-      <el-table-column prop="orderNo" label="订单编号" width="160" align="center" resizable="false" />
+      <el-table-column prop="orderCode" label="订单编号" width="160" align="center" resizable="false" />
       <el-table-column prop="supplierName" label="供应商名称" min-width="180" align="center" resizable="false" />
 
       <el-table-column prop="materialCount" label="物料种类" width="90" align="center" resizable="false" />

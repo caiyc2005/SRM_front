@@ -4,12 +4,13 @@ import { ref } from 'vue'
 const props = defineProps({
   visible: { type: Boolean, required: true },
   supplierList: { type: Array, required: true },
+  materialList: { type: Array, required: true },
   formData: { type: Object, required: true }
 })
 
 const emit = defineEmits(['update:visible', 'addMaterial', 'removeMaterial', 'submit'])
 
-// 供应商筛选（支持编码和名称模糊搜索）
+// 供应商筛选
 const filteredSuppliers = ref([...props.supplierList])
 
 function filterSupplier(query) {
@@ -19,12 +20,12 @@ function filterSupplier(query) {
   }
   const q = query.toLowerCase()
   filteredSuppliers.value = props.supplierList.filter(
-    s => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q)
+    s => s.supplierName.toLowerCase().includes(q) || s.supplierCode.toLowerCase().includes(q)
   )
 }
 
 function computedAmount(row) {
-  return (row.quantity * row.price).toFixed(2)
+  return (row.qty * row.unitPrice).toFixed(2)
 }
 </script>
 
@@ -39,7 +40,7 @@ function computedAmount(row) {
     <el-form :model="formData" label-width="100px">
       <el-form-item label="供应商" required>
         <el-select
-          v-model="formData.supplierId"
+          v-model="formData.supplierID"
           filterable
           :filter-method="filterSupplier"
           placeholder="请输入供应商编号或名称搜索"
@@ -47,9 +48,9 @@ function computedAmount(row) {
         >
           <el-option
             v-for="item in filteredSuppliers"
-            :key="item.id"
-            :label="`${item.name} (${item.code})`"
-            :value="item.id"
+            :key="item.supplierID"
+            :label="`${item.supplierName} (${item.supplierCode})`"
+            :value="item.supplierID"
           />
         </el-select>
       </el-form-item>
@@ -58,34 +59,41 @@ function computedAmount(row) {
         <div style="margin-bottom: 10px;">
           <el-button size="small" @click="emit('addMaterial')">+ 新增物料</el-button>
           <span style="color: #909399; font-size: 12px; margin-left: 8px;">
-            请填写完整物料信息，数量和单价需大于0
+            选择物料后自动带入编码和名称，数量和单价需大于0
           </span>
         </div>
         <el-table :data="formData.materials" border size="small" style="width: 100%">
-          <el-table-column label="物料编码" prop="materialCode">
+          <el-table-column label="物料" min-width="200">
             <template #default="scope">
-              <el-input v-model="scope.row.materialCode" size="small" placeholder="请输入" />
+              <el-select
+                v-model="scope.row.materialID"
+                filterable
+                placeholder="搜索并选择物料"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="m in props.materialList"
+                  :key="m.materialID || m.materialCode"
+                  :label="`${m.materialCode} - ${m.materialName}`"
+                  :value="m.materialID || m.materialCode"
+                />
+              </el-select>
             </template>
           </el-table-column>
-          <el-table-column label="物料名称" prop="materialName">
-            <template #default="scope">
-              <el-input v-model="scope.row.materialName" size="small" placeholder="请输入" />
-            </template>
-          </el-table-column>
-          <el-table-column label="数量" prop="quantity" width="90">
+          <el-table-column label="数量" width="90">
             <template #default="scope">
               <el-input-number
-                v-model="scope.row.quantity"
+                v-model="scope.row.qty"
                 :min="1"
                 size="small"
                 style="width: 100%"
               />
             </template>
           </el-table-column>
-          <el-table-column label="单价(元)" prop="price" width="110">
+          <el-table-column label="单价(元)" width="110">
             <template #default="scope">
               <el-input-number
-                v-model="scope.row.price"
+                v-model="scope.row.unitPrice"
                 :min="0.01"
                 :precision="2"
                 size="small"
@@ -111,16 +119,6 @@ function computedAmount(row) {
             </template>
           </el-table-column>
         </el-table>
-      </el-form-item>
-
-      <el-form-item label="预计交货日期">
-        <el-date-picker
-          v-model="formData.deliveryDate"
-          type="date"
-          placeholder="选择交货日期"
-          value-format="YYYY-MM-DD"
-          style="width: 100%"
-        />
       </el-form-item>
 
       <el-form-item label="备注">
