@@ -2,17 +2,30 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppSidebar from '@/components/AppSidebar.vue'
+import AppFilter from '@/components/AppFilter.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import Logout from '@/components/Logout.vue'
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
 import { DEFAULT_SUPPLIERS, initMockOrders } from '@/mock'
 
+const shipStatusOptions = [
+  { label: '全部', value: '' },
+  { label: '未发货', value: 'pending' },
+  { label: '已发货', value: 'shipped' }
+]
+
+const filterFields = [
+  { key: 'shipFilter', label: '发货状态', type: 'select', width: 140, options: shipStatusOptions },
+  { key: 'keyword', label: '送货单号/订单号', type: 'input', width: 300, placeholder: '送货单号 / 订单号' }
+]
+
 // ==================== 数据 ====================
 const supplierList = ref([...DEFAULT_SUPPLIERS])
 const allOrders = ref([])
-const searchNo = ref('')
 
 const query = reactive({
+  shipFilter: '',
+  keyword: '',
   pageNum: 1,
   pageSize: 10
 })
@@ -28,15 +41,20 @@ const shipOrders = computed(() => {
   return [...filtered].sort((a, b) => (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99))
 })
 
-// 按送货单号/订单号筛选
+// 按关键字 + 发货状态筛选
 const filteredOrders = computed(() => {
   let list = shipOrders.value
-  const kw = searchNo.value.trim()
+  const kw = query.keyword.trim()
   if (kw) {
     list = list.filter(o =>
-      o.orderNo.toLowerCase().includes(kw.toLowerCase()) ||
+      o.orderCode.toLowerCase().includes(kw.toLowerCase()) ||
       (o.deliveryNo && o.deliveryNo.toLowerCase().includes(kw.toLowerCase()))
     )
+  }
+  if (query.shipFilter === 'pending') {
+    list = list.filter(o => o.status === '2')
+  } else if (query.shipFilter === 'shipped') {
+    list = list.filter(o => ['3', '4', '5'].includes(o.status))
   }
   return list
 })
@@ -51,23 +69,28 @@ function handlePageChange() {
   // 分页变化时自动更新 tableData
 }
 
-// 搜索或清空时重置到第一页
-function handleSearch() {
+function handleQuery() {
+  query.pageNum = 1
+}
+
+function handleReset() {
+  query.shipFilter = ''
+  query.keyword = ''
   query.pageNum = 1
 }
 
 // ==================== 操作 ====================
 function handleShip(row) {
   ElMessageBox.confirm(
-    `确认订单「${row.orderNo}」已发货吗？`,
+    `确认订单「${row.orderCode}」已发货吗？`,
     '发货确认',
     { type: 'warning', confirmButtonText: '确认发货' }
   ).then(() => {
-    const target = allOrders.value.find(o => o.id === row.id)
+    const target = allOrders.value.find(o => o.orderID === row.orderID)
     if (target) {
       target.status = '3'
       allOrders.value = allOrders.value.slice() // 触发视图更新
-      ElMessage.success(`订单 ${row.orderNo} 已更新为「已发货」`)
+      ElMessage.success(`订单 ${row.orderCode} 已更新为「已发货」`)
     }
   }).catch(() => {})
 }
@@ -79,31 +102,12 @@ function handleShip(row) {
 
     <div class="main">
       <div class="header">
-        <h3>发货管理</h3>
+        <h3>供应商发货</h3>
         <Logout />
       </div>
 
       <div class="content">
-        <!-- 扫描/查询输入 -->
-        <el-card shadow="never" class="search-card">
-          <div class="search-row">
-            <el-input
-              v-model="searchNo"
-              placeholder="扫描或输入送货单号 / 订单号"
-              clearable
-              size="large"
-              @input="handleSearch"
-              @keyup.enter="handleSearch"
-            >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-              <template #append>
-                <el-button @click="handleSearch">查询</el-button>
-              </template>
-            </el-input>
-          </div>
-        </el-card>
+        <AppFilter :fields="filterFields" :model="query" @query="handleQuery" @reset="handleReset" />
 
         <!-- 订单列表 -->
         <el-card shadow="never">
@@ -117,7 +121,7 @@ function handleShip(row) {
               <template #default="{ row }">
                 <div class="detail-content">
                   <div class="detail-info">
-                    <div><span>订单编号：</span><b>{{ row.orderNo }}</b></div>
+                    <div><span>订单编号：</span><b>{{ row.orderCode }}</b></div>
                     <div><span>供应商：</span><b>{{ row.supplierName }}</b></div>
                     <div><span>订单状态：</span><b>{{ getStatusText(row.status) }}</b></div>
                     <div><span>总金额：</span><b class="red-price">¥{{ row.totalAmount }}</b></div>
@@ -132,15 +136,15 @@ function handleShip(row) {
                     <el-table-column prop="materialCode" label="物料编码" width="120" align="center" />
                     <el-table-column prop="materialName" label="物料名称" width="180" align="center" />
                     <el-table-column prop="spec" label="规格" width="120" align="center" />
-                    <el-table-column prop="quantity" label="采购数量" align="center" />
-                    <el-table-column prop="price" label="单价" align="center" />
+                    <el-table-column prop="qty" label="采购数量" align="center" />
+                    <el-table-column prop="unitPrice" label="单价" align="center" />
                     <el-table-column prop="amount" label="金额" align="center" />
                   </el-table>
                 </div>
               </template>
             </el-table-column>
 
-            <el-table-column prop="orderNo" label="订单编号" width="160" align="center" />
+            <el-table-column prop="orderCode" label="订单编号" width="160" align="center" />
             <el-table-column prop="supplierName" label="供应商" min-width="160" />
             <el-table-column prop="deliveryNo" label="送货单号" width="180" align="center">
               <template #default="{ row }">
@@ -181,49 +185,11 @@ function handleShip(row) {
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .header { height: 60px; background: #fff; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
 .content { padding: 20px; flex: 1; overflow-y: auto; background: #f0f2f5; }
-
-.search-card {
-  margin-bottom: 16px;
-}
-.search-row {
-  display: flex;
-  gap: 12px;
-}
-.search-row .el-input {
-  flex: 1;
-}
-
-.table-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  font-size: 14px;
-}
-.table-header span:first-child {
-  font-weight: bold;
-  color: #333;
-}
-.table-header span:last-child {
-  color: #999;
-}
-
-.detail-content {
-  padding: 15px;
-  background: #fafafa;
-}
-.detail-info {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 15px;
-  font-size: 13px;
-}
-.detail-info span {
-  color: #666;
-}
-.red-price {
-  color: #f56c6c;
-  font-weight: 500;
-}
+.table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 14px; }
+.table-header span:first-child { font-weight: bold; color: #333; }
+.table-header span:last-child { color: #999; }
+.detail-content { padding: 15px; background: #fafafa; }
+.detail-info { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; font-size: 13px; }
+.detail-info span { color: #666; }
+.red-price { color: #f56c6c; font-weight: 500; }
 </style>
