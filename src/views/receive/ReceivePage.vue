@@ -4,15 +4,17 @@
  *
  * 功能：扫码/手动输入送货单号加载送货信息 → 填写实收数量 → 确认收货
  *       Tab2：收料记录查询
- * 数据源：initMockDeliveries（送货单）、本地收料记录
+ *       Tab3：待收料列表
  */
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppSidebar from '@/components/AppSidebar.vue'
+import AppFilter from '@/components/AppFilter.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import Logout from '@/components/Logout.vue'
-import { DEFAULT_SUPPLIERS } from '@/mock'
+import { DEFAULT_SUPPLIERS, initMockOrders } from '@/mock'
 import { initMockDeliveries } from '@/mock/deliveryData.js'
+import { getStatusText, getStatusTag } from '@/utils/orderUtils'
 
 // ==================== Tab 控制 ====================
 const activeTab = ref('receive')
@@ -158,9 +160,72 @@ function handleHistoryPageChange() {
   // AppPagination 自动更新
 }
 
+// ==================== Tab3：待收料 ====================
+const supplierList = ref([...DEFAULT_SUPPLIERS])
+const allOrders = ref([])
+const tableRef = ref(null)
+
+const pendingQuery = reactive({
+  keyword: '',
+  pageNum: 1,
+  pageSize: 10
+})
+
+const pendingFilterFields = [
+  { key: 'keyword', label: '关键字', type: 'input', width: 300, placeholder: '订单号 / 送货单号' }
+]
+
+// 只显示已发货(status=3)的订单
+const pendingReceiveOrders = computed(() => {
+  return allOrders.value.filter(o => o.status === '3')
+})
+
+const filteredOrders = computed(() => {
+  let list = pendingReceiveOrders.value
+  const kw = pendingQuery.keyword.trim()
+  if (kw) {
+    list = list.filter(o =>
+      o.orderCode.toLowerCase().includes(kw.toLowerCase()) ||
+      (o.deliveryNo && o.deliveryNo.toLowerCase().includes(kw.toLowerCase()))
+    )
+  }
+  return list
+})
+
+const pendingTableData = computed(() => {
+  const start = (pendingQuery.pageNum - 1) * pendingQuery.pageSize
+  return filteredOrders.value.slice(start, start + pendingQuery.pageSize)
+})
+
+const pendingTotal = computed(() => filteredOrders.value.length)
+
+function handlePendingQuery() { pendingQuery.pageNum = 1 }
+function handlePendingReset() { pendingQuery.keyword = ''; pendingQuery.pageNum = 1 }
+function handlePendingPageChange() {}
+
+function handleRowClick(row) {
+  if (tableRef.value) {
+    tableRef.value.toggleRowExpansion(row)
+  }
+}
+
+function handleReceive(row) {
+  ElMessageBox.confirm(
+    `确认订单「${row.orderCode}」的物料已全部收料入库吗？`,
+    '收料确认',
+    { type: 'warning', confirmButtonText: '确认收料' }
+  ).then(() => {
+    const target = allOrders.value.find(o => o.orderID === row.orderID)
+    if (target) {
+      target.status = '4'
+      ElMessage.success(`订单 ${row.orderCode} 已更新为「已收货」`)
+    }
+  }).catch(() => {})
+}
+
 // ==================== 生命周期 ====================
 onMounted(() => {
-  // 初始化送货单数据，并补充供应商信息
+  // 初始化送货单数据
   const deliveries = initMockDeliveries()
   allDeliveries.value = deliveries.map((d, i) => {
     const si = i % DEFAULT_SUPPLIERS.length
@@ -171,6 +236,8 @@ onMounted(() => {
       supplierCode: supplier?.supplierCode || d.supplierCode || '—'
     }
   })
+  // 初始化订单数据（用于待收料）
+  allOrders.value = initMockOrders(supplierList.value)
 })
 </script>
 
@@ -180,7 +247,7 @@ onMounted(() => {
 
     <div class="main">
       <div class="header">
-        <h3>扫码收料</h3>
+        <h3>收料入库</h3>
         <Logout />
       </div>
 
@@ -213,7 +280,7 @@ onMounted(() => {
                 </div>
                 <div class="search-hint">
                   <el-icon><InfoFilled /></el-icon>
-                  扫描送货单条形码，或手动输入送货单号（如 S20240601001）进行查询
+                  扫描送货单条形码，或手动输入送货单号进行查询
                 </div>
               </div>
 
@@ -302,7 +369,6 @@ onMounted(() => {
                 </div>
               </div>
 
-              <!-- 初始状态提示 -->
               <el-empty
                 v-if="!foundDelivery && !notFound"
                 description="请扫描送货单条形码或输入送货单号查询"
@@ -377,6 +443,72 @@ onMounted(() => {
                 />
               </template>
             </el-tab-pane>
+
+            <!-- ==================== Tab3：待收料 ==================== -->
+            <el-tab-pane label="待收料" name="pending">
+              <AppFilter :fields="pendingFilterFields" :model="pendingQuery" @query="handlePendingQuery" @reset="handlePendingReset" />
+
+              <div class="table-header">
+                <span>待收料列表</span>
+                <span>共 {{ pendingTotal }} 条</span>
+              </div>
+
+              <el-table
+                ref="tableRef"
+                :data="pendingTableData"
+                row-key="orderID"
+                stripe
+                border
+                style="width: 100%"
+                @row-click="handleRowClick"
+              >
+                <el-table-column type="expand">
+                  <template #default="{ row }">
+                    <div class="detail-content">
+                      <div class="detail-info">
+                        <div><span>订单编号：</span><b>{{ row.orderCode }}</b></div>
+                        <div><span>供应商：</span><b>{{ row.supplierName }}</b></div>
+                        <div><span>订单状态：</span><b>{{ getStatusText(row.status) }}</b></div>
+                        <div><span>总金额：</span><b class="red-price">¥{{ row.totalAmount }}</b></div>
+                        <div><span>送货单号：</span><b style="color: #1890ff">{{ row.deliveryNo || '—' }}</b></div>
+                        <div><span>交货日期：</span><b>{{ row.deliveryDate }}</b></div>
+                        <div><span>创建时间：</span><b>{{ row.createTime }}</b></div>
+                      </div>
+                      <el-table :data="row.materials" size="small" border style="width: 100%">
+                        <el-table-column prop="index" label="序号" width="60" align="center" />
+                        <el-table-column prop="materialCode" label="物料编码" width="120" align="center" />
+                        <el-table-column prop="materialName" label="物料名称" width="180" align="center" />
+                        <el-table-column prop="spec" label="规格" width="120" align="center" />
+                        <el-table-column prop="qty" label="采购数量" align="center" />
+                        <el-table-column prop="unitPrice" label="单价" align="center" />
+                        <el-table-column prop="amount" label="金额" align="center" />
+                      </el-table>
+                    </div>
+                  </template>
+                </el-table-column>
+
+                <el-table-column prop="orderCode" label="订单编号" width="160" align="center" />
+                <el-table-column prop="supplierName" label="供应商" min-width="160" />
+                <el-table-column prop="deliveryNo" label="送货单号" width="180" align="center">
+                  <template #default="{ row }">
+                    <span v-if="row.deliveryNo" style="color: #1890ff;">{{ row.deliveryNo }}</span>
+                    <span v-else style="color: #999;">—</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="订单状态" width="100" align="center">
+                  <template #default="{ row }">
+                    <el-tag :type="getStatusTag(row.status)" size="small">{{ getStatusText(row.status) }}</el-tag>
+                  </template>
+                </el-table-column>
+                <!-- <el-table-column label="操作" width="120" align="center">
+                  <template #default="{ row }">
+                    <el-button type="success" size="small" @click.stop="handleReceive(row)">确认收料</el-button>
+                  </template>
+                </el-table-column> -->
+              </el-table>
+
+              <AppPagination :total="pendingTotal" :query="pendingQuery" @change="handlePendingPageChange" />
+            </el-tab-pane>
           </el-tabs>
         </el-card>
       </div>
@@ -433,10 +565,10 @@ onMounted(() => {
   font-size: 16px;
 }
 
-/* 收料记录 */
+/* 表格通用 */
 .table-header {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 16px; font-size: 14px;
+  margin: 16px 0; font-size: 14px;
 }
 .table-header span:first-child { font-weight: bold; color: #333; }
 .table-header span:last-child { color: #999; }
@@ -447,4 +579,13 @@ onMounted(() => {
 .detail-title {
   font-size: 14px; font-weight: 500; margin-bottom: 10px; color: #333;
 }
+.detail-info {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 15px;
+  font-size: 13px;
+}
+.detail-info span { color: #666; }
+.red-price { color: #f56c6c; font-weight: 500; }
 </style>
