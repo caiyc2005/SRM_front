@@ -11,10 +11,14 @@ import { generateOrderNo } from '@/utils/orderUtils'
 
 // ==================== 供应商 ====================
 export const DEFAULT_SUPPLIERS = [
-  { supplierID:'S005', supplierCode:'SUP-005', supplierName:'宏盛钢材有限公司', },
-  { supplierID: '1', supplierCode: 'HZ001', supplierName: '杭州电子科技有限公司' },
-  { supplierID: '2', supplierCode: 'SZ002', supplierName: '深圳五金制品厂' },
-  { supplierID: '3', supplierCode: 'SH003', supplierName: '上海塑胶材料有限公司' }
+  { supplierID: 'S001', supplierCode: 'SUP-001', supplierName: '宏盛钢材有限公司', people: '张伟', phoneNumber: '13800138001', address: '浙江省杭州市余杭区仓前街道', isDel: false, memo: '钢材类主力供应商' },
+  { supplierID: 'S002', supplierCode: 'HZ001', supplierName: '杭州电子科技有限公司', people: '李娜', phoneNumber: '13800138002', address: '浙江省杭州市滨江区江南大道', isDel: false, memo: '电子元器件供应商' },
+  { supplierID: 'S003', supplierCode: 'SZ002', supplierName: '深圳五金制品厂', people: '王强', phoneNumber: '13800138003', address: '广东省深圳市宝安区沙井街道', isDel: false, memo: '' },
+  { supplierID: 'S004', supplierCode: 'SH003', supplierName: '上海塑胶材料有限公司', people: '赵敏', phoneNumber: '13800138004', address: '上海市嘉定区安亭镇墨玉路', isDel: false, memo: '' },
+  { supplierID: 'S005', supplierCode: 'NJ004', supplierName: '南京精密机械有限公司', people: '刘洋', phoneNumber: '13800138005', address: '江苏省南京市江宁区秣陵街道', isDel: false, memo: '精密加工件供应商' },
+  { supplierID: 'S006', supplierCode: 'WH005', supplierName: '武汉包装材料厂', people: '陈静', phoneNumber: '13800138006', address: '湖北省武汉市洪山区珞喻路', isDel: true, memo: '已终止合作' },
+  { supplierID: 'S007', supplierCode: 'CD006', supplierName: '成都检测仪器有限公司', people: '周涛', phoneNumber: '13800138007', address: '四川省成都市高新区天府大道', isDel: false, memo: '' },
+  { supplierID: 'S008', supplierCode: 'XA007', supplierName: '西安复合材料科技有限公司', people: '吴芳', phoneNumber: '13800138008', address: '陕西省西安市雁塔区锦业路', isDel: false, memo: '碳纤维复合材料' }
 ]
 
 // ==================== 物料 ====================
@@ -65,11 +69,12 @@ export function initMockOrders(suppliers) {
     const day = String(i % 30 + 1).padStart(2, '0')
     const createDate = `2024-06-${day}`
 
+    const si = i % suppliers.length
     data.push({
       orderID: String(i),
       orderCode: generateOrderNo(createDate),
-      supplierID: String(i % 3 + 1),
-      supplierName: suppliers[i % 3].supplierName,
+      supplierID: suppliers[si].supplierID,
+      supplierName: suppliers[si].supplierName,
       status: String(i % 6),
       materialCount: materialNum,
       totalAmount: totalAmount.toFixed(2),
