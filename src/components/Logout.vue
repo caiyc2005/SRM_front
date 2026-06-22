@@ -1,11 +1,27 @@
 <script setup>
 /**
- * Logout.vue — 用户菜单（鼠标悬停显示个人中心 / 退出登录）
+ * Logout.vue — 用户菜单（显示当前用户名 / 退出登录）
  */
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 
 const router = useRouter()
+const userName = ref('')
+
+onMounted(() => {
+  const userInfo = localStorage.getItem('userInfo')
+  if (userInfo) {
+    try {
+      const parsed = JSON.parse(userInfo)
+      userName.value = parsed.userName || parsed.userCode || '未知用户'
+    } catch {
+      userName.value = '未知用户'
+    }
+  } else {
+    userName.value = '未登录'
+  }
+})
 
 function handleLogout() {
   ElMessageBox.confirm('确认要退出登录吗？', '退出登录', {
@@ -13,7 +29,8 @@ function handleLogout() {
     confirmButtonText: '确认退出',
     cancelButtonText: '取消'
   }).then(() => {
-    // 后续接入后端后，可在此清除 token / 用户信息
+    localStorage.removeItem('token')
+    localStorage.removeItem('userInfo')
     router.push('/login')
   }).catch(() => {})
 }
@@ -26,7 +43,7 @@ function handleProfile() {
 <template>
   <el-dropdown trigger="hover" placement="bottom-end">
     <span class="user-trigger">
-      当前用户：采购员
+      当前用户：{{ userName }}
       <el-icon><ArrowDown /></el-icon>
     </span>
     <template #dropdown>
