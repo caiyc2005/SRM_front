@@ -7,6 +7,15 @@ const route = useRoute()
 
 const menuItems = [
   {
+    key: 'basic',
+    label: '📋 基础信息',
+    children: [
+      { key: 'basic-user', label: '用户管理', path: '/basic/user' },
+      { key: 'basic-role', label: '角色管理', path: '/basic/role' },
+      { key: 'supplier', label: '供应商管理', path: '/supplier' }
+    ]
+  },
+  {
     key: 'order',
     label: '📋 采购订单管理',
     children: [
@@ -14,11 +23,15 @@ const menuItems = [
       { key: 'order-query', label: '采购订单查询', path: '/order/query' }
     ]
   },
-  { key: 'ship', label: '🚚 发货管理', path: '/ship' },
-  { key: 'delivery', label: '📦 送货单管理', path: '/delivery' },
-  { key: 'receive', label: '📱 扫码收料', path: '/receive' },
-  { key: 'supplier', label: '🏭 供应商管理', path: '/supplier' },
-  { key: 'user', label: '👥 用户信息管理', path: '/user' }
+  {
+    key: 'warehouse',
+    label: '🏭 仓储管理',
+    children: [
+      { key: 'delivery', label: '送货单查询', path: '/delivery' },
+      { key: 'receive', label: '收料入库', path: '/receive' }
+    ]
+  },
+  { key: 'ship', label: '🚚 供应商发货', path: '/ship' }
 ]
 
 // 默认展开采购订单管理

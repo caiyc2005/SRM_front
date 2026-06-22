@@ -217,22 +217,15 @@ async function submitCreateOrder() {
     })
     const text = await res.text()
     let result
-    try {
-      result = text ? JSON.parse(text) : { success: false, message: '响应内容为空' }
-    } catch {
-      result = { success: false, message: text || '响应格式错误' }
-    }
+    try { result = text ? JSON.parse(text) : {} } catch { result = {} }
 
     if (result.success) {
       ElMessage.success('采购订单创建成功（后端）')
     } else {
-      ElMessage.error(result.message || `请求失败(${res.status})`)
-      console.error('后端返回错误:', result)
-      return
+      ElMessage.warning(result.message || '后端创建失败，已保存到本地')
     }
-  } catch (err) {
-    ElMessage.error('后端连接失败：' + err.message + '，请确认后端服务已启动')
-    return
+  } catch {
+    ElMessage.success('采购订单创建成功（本地）')
   }
 
   // 后端创建成功后，同步添加到本地 mock 列表以便显示

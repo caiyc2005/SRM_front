@@ -13,5 +13,7 @@ export {
 } from './orderData.js'
 
 export {
-  MOCK_USERS
+  MOCK_USERS,
+  MOCK_ROLES,
+  MOCK_USER_ROLES
 } from './userData.js'

@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
 import AppPagination from '@/components/AppPagination.vue'
 
@@ -6,13 +7,19 @@ defineProps({
   tableData: { type: Array, required: true },
   total: { type: Number, required: true },
   query: { type: Object, required: true },
-  /** 操作列模式: all | none */
   actionType: { type: String, default: 'all' },
-  /** 是否隐藏「确认订单」按钮（查询模式下隐藏） */
   hideConfirm: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['pageChange', 'confirm', 'generateDelivery'])
+
+const tableRef = ref(null)
+
+function handleRowClick(row) {
+  if (tableRef.value) {
+    tableRef.value.toggleRowExpansion(row)
+  }
+}
 </script>
 
 <template>
@@ -22,8 +29,15 @@ const emit = defineEmits(['pageChange', 'confirm', 'generateDelivery'])
       <span>共 {{ total }} 条记录</span>
     </div>
 
-    <el-table :data="tableData" row-key="orderID" border style="width: 100%">
-      <!-- 展开订单详情 -->
+    <el-table
+      ref="tableRef"
+      :data="tableData"
+      row-key="orderID"
+      border
+      style="width: 100%"
+      @row-click="handleRowClick"
+    >
+      <!-- 展开订单详情（保留箭头） -->
       <el-table-column type="expand">
         <template #default="props">
           <div class="detail-content">
@@ -73,12 +87,12 @@ const emit = defineEmits(['pageChange', 'confirm', 'generateDelivery'])
         <template #default="scope">
           <template v-if="scope.row.status === '0'">
             <el-button v-if="!hideConfirm" type="primary" link size="small"
-              @click="emit('confirm', scope.row)">
+              @click.stop="emit('confirm', scope.row)">
               确认订单
             </el-button>
           </template>
           <el-button v-else-if="scope.row.status === '1'" type="success" link size="small"
-            @click="emit('generateDelivery', scope.row)">
+            @click.stop="emit('generateDelivery', scope.row)">
             生成送货单
           </el-button>
           <el-tag v-else type="warning" size="small" class="no-action">已生成送货单</el-tag>

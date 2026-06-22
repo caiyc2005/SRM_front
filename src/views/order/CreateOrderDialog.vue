@@ -1,14 +1,14 @@
 <script setup>
 import { ref } from 'vue'
 
+const emit = defineEmits(['update:visible', 'addMaterial', 'removeMaterial', 'submit'])
+
 const props = defineProps({
   visible: { type: Boolean, required: true },
   supplierList: { type: Array, required: true },
   materialList: { type: Array, required: true },
   formData: { type: Object, required: true }
 })
-
-const emit = defineEmits(['update:visible', 'addMaterial', 'removeMaterial', 'submit'])
 
 // 供应商筛选
 const filteredSuppliers = ref([...props.supplierList])

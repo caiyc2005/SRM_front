@@ -2,10 +2,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '@/views/Login.vue'
 import OrderPage from '@/views/order/OrderPage.vue'
 import DeliveryPage from '@/views/delivery/DeliveryPage.vue'
-import UserPage from '@/views/user/UserPage.vue'
 import ShipPage from '@/views/ship/ShipPage.vue'
 import SupplierPage from '@/views/supplier/SupplierPage.vue'
 import ReceivePage from '@/views/receive/ReceivePage.vue'
+import UserManagement from '@/views/basic/UserManagement.vue'
+import RoleManagement from '@/views/basic/RoleManagement.vue'
 
 const routes = [
   {
@@ -37,11 +38,6 @@ const routes = [
     component: DeliveryPage
   },
   {
-    path: '/user',
-    name: 'User',
-    component: UserPage
-  },
-  {
     path: '/ship',
     name: 'Ship',
     component: ShipPage
@@ -55,6 +51,17 @@ const routes = [
     path: '/receive',
     name: 'Receive',
     component: ReceivePage
+  },
+  // ========== 基础信息 ==========
+  {
+    path: '/basic/user',
+    name: 'UserManagement',
+    component: UserManagement
+  },
+  {
+    path: '/basic/role',
+    name: 'RoleManagement',
+    component: RoleManagement
   }
 ]
 
