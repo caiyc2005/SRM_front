@@ -27,13 +27,26 @@ function filterSupplier(query) {
 function computedAmount(row) {
   return (row.qty * row.unitPrice).toFixed(2)
 }
+
+//通过当前行的物料ID获取物料规格
+function getMaterialSpec(materialID) {
+  if (!materialID) return ''
+  const mat = props.materialList.find(m => (m.materialID || m.materialCode) === materialID)
+  return mat ? (mat.spec || '') : ''
+}
+//通过当前行的物料ID获取物料单位
+function getMaterialUnit(materialID) {
+  if (!materialID) return ''
+  const mat = props.materialList.find(m => (m.materialID || m.materialCode) === materialID)
+  return mat ? (mat.unit || '') : ''
+}
 </script>
 
 <template>
   <el-dialog
     :model-value="visible"
     title="创建采购订单"
-    width="750px"
+    width="900px"
     :close-on-click-modal="false"
     @update:model-value="val => emit('update:visible', val)"
   >
@@ -59,11 +72,11 @@ function computedAmount(row) {
         <div style="margin-bottom: 10px;">
           <el-button size="small" @click="emit('addMaterial')">+ 新增物料</el-button>
           <span style="color: #909399; font-size: 12px; margin-left: 8px;">
-            选择物料后自动带入编码和名称，数量和单价需大于0
+            选择物料后自动带入规格和单位，数量和单价需大于0
           </span>
         </div>
         <el-table :data="formData.materials" border size="small" style="width: 100%">
-          <el-table-column label="物料" min-width="200">
+          <el-table-column label="物料" min-width="180">
             <template #default="scope">
               <el-select
                 v-model="scope.row.materialID"
@@ -78,6 +91,16 @@ function computedAmount(row) {
                   :value="m.materialID || m.materialCode"
                 />
               </el-select>
+            </template>
+          </el-table-column>
+          <el-table-column label="规格" width="130" align="center">
+            <template #default="scope">
+              {{ getMaterialSpec(scope.row.materialID) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="单位" width="70" align="center">
+            <template #default="scope">
+              {{ getMaterialUnit(scope.row.materialID) }}
             </template>
           </el-table-column>
           <el-table-column label="数量" width="90">
