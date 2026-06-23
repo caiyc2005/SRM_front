@@ -67,7 +67,8 @@ async function handleSearch() {
       notFound.value = false
       foundDelivery.value = {
         noteCode: item.noteCode,
-        orderNo: item.orderID || '',
+        orderID: item.orderID || '',
+        orderCode: item.orderCode || '',
         supplierName: item.supplierName || '',
         supplierCode: '',
         expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
@@ -204,7 +205,8 @@ async function handleConfirmReceive() {
     recordCode: 'REC-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' +
       String(receiveRecords.value.length + 1).padStart(3, '0'),
     noteCode: delivery.noteCode,
-    orderNo: delivery.orderNo,
+    orderID: delivery.orderID,
+    orderCode: delivery.orderCode || '',
     supplierName: delivery.supplierName || '—',
     operator: '仓管员',
     receiveDate: new Date().toLocaleString('zh-CN'),
@@ -286,7 +288,7 @@ async function loadReceiveRecords() {
           recordId: r.receiveID,
           recordCode: r.receiveCode || '',
           noteCode: r.noteCode || '',
-          orderNo: r.orderNo || r.orderID || r.orderCode || '',
+          orderCode: r.orderCode || '',
           supplierName: r.supplierName || '',
           operator: r.receiveUserName || '',
           receiveDate: r.receiveDate ? r.receiveDate.replace('T', ' ').slice(0, 16) : '',
@@ -665,8 +667,8 @@ onMounted(() => {
                   <el-descriptions-item label="送货单号">
                     <b style="color: #1890ff">{{ foundDelivery.noteCode }}</b>
                   </el-descriptions-item>
-                  <el-descriptions-item label="对应订单号">
-                    {{ foundDelivery.orderNo }}
+                  <el-descriptions-item label="采购单号">
+                    {{ foundDelivery.orderCode }}
                   </el-descriptions-item>
                   <el-descriptions-item label="供应商">
                     {{ foundDelivery.supplierName }}
@@ -790,7 +792,7 @@ onMounted(() => {
 
                   <el-table-column prop="recordCode" label="收料单号" width="180" align="center" />
                   <el-table-column prop="noteCode" label="送货单号" width="180" align="center" />
-                  <el-table-column prop="orderNo" label="对应订单号" width="160" align="center" />
+                  <el-table-column prop="orderCode" label="采购单号" width="160" align="center" />
                   <el-table-column prop="supplierName" label="供应商" min-width="160" />
                   <el-table-column prop="totalPlanQty" label="计划总数" width="100" align="center" />
                   <el-table-column prop="totalReceivedQty" label="实收总数" width="100" align="center" />
