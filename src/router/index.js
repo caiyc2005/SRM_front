@@ -7,6 +7,7 @@ import SupplierPage from '@/views/supplier/SupplierPage.vue'
 import ReceivePage from '@/views/receive/ReceivePage.vue'
 import UserManagement from '@/views/basic/UserManagement.vue'
 import RoleManagement from '@/views/basic/RoleManagement.vue'
+import MaterialManagement from '@/views/basic/MaterialManagement.vue'
 
 const routes = [
   {
@@ -67,6 +68,11 @@ const routes = [
     path: '/basic/role',
     name: 'RoleManagement',
     component: RoleManagement
+  },
+  {
+    path: '/basic/material',
+    name: 'MaterialManagement',
+    component: MaterialManagement
   }
 ]
 
