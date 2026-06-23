@@ -17,14 +17,30 @@ import CreateOrderDialog from './CreateOrderDialog.vue'
 
 import { getStatusText, getStatusTag, generateOrderNo, generateDeliveryNo, formatNow } from '@/utils/orderUtils'
 
-import { DEFAULT_SUPPLIERS, DEFAULT_MATERIALS, initMockOrders, deliverySeq as mockDeliverySeq } from '@/mock'
+import { DEFAULT_MATERIALS, initMockOrders, deliverySeq as mockDeliverySeq } from '@/mock'
 
 // ============ API 基础路径 ============
 const API_BASE = '/api/Orders'
 
 // ============ 数据状态 ============
-const supplierList = ref([...DEFAULT_SUPPLIERS])
+const supplierList = ref([])
 const materialList = ref([])
+
+async function loadSuppliers() {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch('/api/Supplier/GetAllSuppliers', {
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+    if (result.success && result.data?.length) {
+      supplierList.value = result.data
+      return
+    }
+  } catch { /* 降级：沿用空列表 */ }
+}
 
 const query = reactive({
   orderCode: '',
@@ -398,6 +414,7 @@ async function handleGenerateDelivery(row) {
 
 // ============ 生命周期 ============
 onMounted(() => {
+  loadSuppliers()
   loadOrders()
   loadMaterials()
 })

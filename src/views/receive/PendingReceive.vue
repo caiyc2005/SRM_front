@@ -6,7 +6,7 @@ import AppFilter from '@/components/AppFilter.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import Logout from '@/components/Logout.vue'
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
-import { DEFAULT_SUPPLIERS, initMockOrders } from '@/mock'
+import { initMockOrders } from '@/mock'
 
 // ==================== 筛选配置 ====================
 const filterFields = [
@@ -14,7 +14,7 @@ const filterFields = [
 ]
 
 // ==================== 数据 ====================
-const supplierList = ref([...DEFAULT_SUPPLIERS])
+const supplierList = ref([])
 const allOrders = ref([])
 
 const query = reactive({

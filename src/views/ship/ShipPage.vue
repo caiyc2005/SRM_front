@@ -6,7 +6,7 @@ import AppFilter from '@/components/AppFilter.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import Logout from '@/components/Logout.vue'
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
-import { DEFAULT_SUPPLIERS, initMockOrders } from '@/mock'
+import { initMockOrders } from '@/mock'
 
 const API_BASE = '/api/Orders'
 const useApi = ref(false)
@@ -23,8 +23,23 @@ const filterFields = [
 ]
 
 // ==================== 数据 ====================
-const supplierList = ref([...DEFAULT_SUPPLIERS])
+const supplierList = ref([])
 const allOrders = ref([])
+
+async function loadSuppliers() {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch('/api/Supplier/GetAllSuppliers', {
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+    if (result.success && result.data?.length) {
+      supplierList.value = result.data
+    }
+  } catch { /* 降级 */ }
+}
 
 const query = reactive({
   shipFilter: '',
@@ -79,6 +94,7 @@ async function loadShipOrders() {
 }
 
 onMounted(() => {
+  loadSuppliers()
   loadShipOrders()
 })
 

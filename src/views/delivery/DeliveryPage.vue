@@ -8,7 +8,6 @@ import Logout from '@/components/Logout.vue'
 import DeliveryTable from './DeliveryTable.vue'
 import PrintDialog from './PrintDialog.vue'
 
-import { DEFAULT_SUPPLIERS } from '@/mock'
 import { initMockDeliveries } from '@/mock/deliveryData.js'
 
 // ============ API ============
@@ -16,7 +15,22 @@ const API_BASE = '/api/Delivery'
 const useApi = ref(false)
 
 // ============ 数据状态 ============
-const supplierList = ref([...DEFAULT_SUPPLIERS])
+const supplierList = ref([])
+
+async function loadSuppliers() {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch('/api/Supplier/GetAllSuppliers', {
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+    if (result.success && result.data?.length) {
+      supplierList.value = result.data
+    }
+  } catch { /* 降级 */ }
+}
 
 const query = reactive({
   deliveryNo: '',
@@ -39,7 +53,7 @@ const deliveryStatusOptions = [
 const deliveryFilterFields = [
   { key: 'deliveryNo', label: '送货单号', type: 'input', width: 220 },
   { key: 'orderNo', label: '对应订单号', type: 'input', width: 220 },
-  { key: 'supplierId', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'name', valueKey: 'id' },
+  { key: 'supplierId', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'supplierName', valueKey: 'supplierID' },
   { key: 'status', label: '收货状态', type: 'select', width: 180, options: deliveryStatusOptions }
 ]
 
@@ -178,6 +192,7 @@ function confirmPrint() {
 
 // ============ 生命周期 ============
 onMounted(() => {
+  loadSuppliers()
   loadDeliveries()
 })
 

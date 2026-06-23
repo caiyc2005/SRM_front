@@ -12,7 +12,7 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import AppFilter from '@/components/AppFilter.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import Logout from '@/components/Logout.vue'
-import { DEFAULT_SUPPLIERS, initMockOrders } from '@/mock'
+import { initMockOrders } from '@/mock'
 import { initMockDeliveries } from '@/mock/deliveryData.js'
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
@@ -294,8 +294,23 @@ async function loadReceiveRecords() {
 }
 
 // ==================== Tab3：待收料 ====================
-const supplierList = ref([...DEFAULT_SUPPLIERS])
+const supplierList = ref([])
 const allOrders = ref([])
+
+async function loadSuppliers() {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch('/api/Supplier/GetAllSuppliers', {
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+    if (result.success && result.data?.length) {
+      supplierList.value = result.data
+    }
+  } catch { /* 降级 */ }
+}
 const tableRef = ref(null)
 
 const pendingQuery = reactive({
@@ -547,20 +562,12 @@ onBeforeUnmount(() => {
 // ==================== 生命周期 ====================
 onMounted(() => {
   // 优先加载 API 数据，降级到 mock
+  loadSuppliers()
   loadReceiveRecords()
   loadPendingOrders()
 
   // 初始化送货单数据（用于扫码快捷选择等本地查找）
-  const deliveries = initMockDeliveries()
-  allDeliveries.value = deliveries.map((d, i) => {
-    const si = i % DEFAULT_SUPPLIERS.length
-    const supplier = DEFAULT_SUPPLIERS[si]
-    return {
-      ...d,
-      supplierName: supplier?.supplierName || d.supplierName || '—',
-      supplierCode: supplier?.supplierCode || d.supplierCode || '—'
-    }
-  })
+  allDeliveries.value = initMockDeliveries()
 })
 </script>
 
