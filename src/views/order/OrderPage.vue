@@ -111,7 +111,9 @@ async function loadOrders() {
     const params = new URLSearchParams()
     if (query.orderCode) params.append('orderCode', query.orderCode)
     if (query.supplierID) params.append('supplierID', query.supplierID)
-    if (isPendingDeliveryMode()) {
+    if (isPendingMode()) {
+      params.append('status', '0')
+    } else if (isPendingDeliveryMode()) {
       params.append('status', '1')
     } else if (query.status) {
       params.append('status', query.status)
