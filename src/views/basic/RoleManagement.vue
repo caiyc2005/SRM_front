@@ -29,7 +29,7 @@ async function loadRoles() {
   roleLoading.value = true
   try {
     const res = await apiGet('GetRoles')
-    if (res.success && res.data?.length) { roles.value = res.data; return }
+    if (res.success && res.data?.length) { roles.value = res.data; roleLoading.value = false; return }
   } catch { /* 降级 */ }
   if (roles.value.length === 0) roles.value = JSON.parse(JSON.stringify(MOCK_ROLES))
   roleLoading.value = false
@@ -75,7 +75,7 @@ function handleDeleteRole(row) {
     { type: 'warning', confirmButtonText: '确定删除' }
   ).then(async () => {
     try {
-      const res = await apiDelete(`DeleteRole/${row.roleId || row.roleID}`)
+      const res = await apiPost(`DeleteRole?id=${row.roleId || row.roleID}`)
       if (res.success) { ElMessage.success('角色已删除'); await loadRoles(); return }
       ElMessage.error(res.message || '删除失败')
     } catch {
@@ -109,7 +109,7 @@ async function loadUserRoles() {
 
 function getUsersByRoleId(roleId) {
   const userIds = userRoles.value.filter(ur => ur.roleID === roleId).map(ur => ur.userID)
-  return users.value.filter(u => userIds.includes(u.id))
+  return users.value.filter(u => userIds.includes(u.userID))
 }
 
 function openRoleUsersDialog(role) { selectedRole.value = role; roleUsersDialogVisible.value = true }
@@ -119,11 +119,11 @@ async function handleRemoveFromRole(user, roleId) {
     { type: 'warning', confirmButtonText: '确定移除' }
   ).then(async () => {
     try {
-      const res = await apiDelete('RemoveUserFromRole', { userID: user.id, roleID: roleId })
+      const res = await apiDelete('RemoveUserFromRole', { userID: user.userID, roleID: roleId })
       if (res.success) { ElMessage.success('用户已从角色移除'); await loadUserRoles(); return }
       ElMessage.error(res.message || '移除失败')
     } catch {
-      userRoles.value = userRoles.value.filter(ur => !(ur.userID === user.id && ur.roleID === roleId))
+      userRoles.value = userRoles.value.filter(ur => !(ur.userID === user.userID && ur.roleID === roleId))
       ElMessage.success('用户已从角色移除（本地）')
     }
   }).catch(() => {})

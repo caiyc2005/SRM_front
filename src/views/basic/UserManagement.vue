@@ -32,14 +32,14 @@ const userQuery = reactive({ keyword: '' })
 const userLoading = ref(false)
 const userFormVisible = ref(false)
 const userFormTitle = ref('')
-const userForm = reactive({ id: '', userCode: '', userName: '', password: '', memo: '' })
+const userForm = reactive({ userID: '', userCode: '', userName: '', password: '', memo: '' })
 const isEditUser = ref(false)
 
 async function loadUsers() {
   userLoading.value = true
   try {
     const res = await apiGet('GetUsers')
-    if (res.success && res.data?.length) { users.value = res.data; return }
+    if (res.success && res.data?.length) { users.value = res.data; userLoading.value = false; return }
   } catch { /* 降级 */ }
   if (users.value.length === 0) users.value = JSON.parse(JSON.stringify(MOCK_USERS))
   userLoading.value = false
@@ -55,13 +55,13 @@ const filteredUsers = computed(() => {
 
 function openAddUser() {
   isEditUser.value = false; userFormTitle.value = '添加用户'
-  Object.assign(userForm, { id: '', userCode: '', userName: '', password: '', memo: '' })
+  Object.assign(userForm, { userID: '', userCode: '', userName: '', password: '', memo: '' })
   userFormVisible.value = true
 }
 
 function openEditUser(row) {
   isEditUser.value = true; userFormTitle.value = '修改用户'
-  Object.assign(userForm, { id: row.id, userCode: row.userCode, userName: row.userName, password: '', memo: row.memo || '' })
+  Object.assign(userForm, { userID: row.userID, userCode: row.userCode, userName: row.userName, password: '', memo: row.memo || '' })
   userFormVisible.value = true
 }
 
@@ -70,7 +70,7 @@ async function submitUser() {
   if (!userForm.userName.trim()) { ElMessage.warning('昵称不能为空'); return }
   if (!isEditUser.value && !userForm.password.trim()) { ElMessage.warning('密码不能为空'); return }
   try {
-    const body = { id: userForm.id, userCode: userForm.userCode, userName: userForm.userName, memo: userForm.memo }
+    const body = { userID: userForm.userID, userCode: userForm.userCode, userName: userForm.userName, memo: userForm.memo }
     let res
     if (isEditUser.value) {
       if (userForm.password.trim()) body.password = userForm.password
@@ -85,14 +85,32 @@ async function submitUser() {
     ElMessage.error(res.message || '操作失败')
   } catch {
     if (isEditUser.value) {
-      const idx = users.value.findIndex(u => u.id === userForm.id)
+      const idx = users.value.findIndex(u => u.userID === userForm.userID)
       if (idx >= 0) users.value[idx] = { ...users.value[idx], ...userForm }
     } else {
-      users.value.unshift({ id: 'USR' + String(Date.now()).slice(-6), userCode: userForm.userCode, userName: userForm.userName, isDel: false, memo: userForm.memo || '' })
+      users.value.unshift({ userID: 'USR' + String(Date.now()).slice(-6), userCode: userForm.userCode, userName: userForm.userName, isDel: false, memo: userForm.memo || '' })
     }
     ElMessage.success(isEditUser.value ? '用户修改成功（本地）' : '用户添加成功（本地）')
     userFormVisible.value = false
   }
+}
+
+// ==================== 禁用用户（不可逆） ====================
+function handleDeleteUser(row) {
+  ElMessageBox.confirm(
+    `确定要禁用用户「${row.userName}」吗？禁用后该用户将无法登录系统。`,
+    '禁用用户',
+    { type: 'warning', confirmButtonText: '确定禁用' }
+  ).then(async () => {
+    try {
+      const res = await apiPost(`DeleteUser?id=${row.userID}`)
+      if (res.success) { ElMessage.success('用户已禁用'); await loadUsers(); return }
+      ElMessage.error(res.message || '操作失败')
+    } catch {
+      row.isDel = true
+      ElMessage.success('用户已禁用（本地）')
+    }
+  }).catch(() => {})
 }
 
 // ==================== 角色关联 ====================
@@ -129,13 +147,13 @@ function getRoleName(roleId) {
 
 function openAssignDialog(user) {
   assignTargetUser.value = user
-  checkedRoles.value = [...getUserRoleIds(user.id)]
+  checkedRoles.value = [...getUserRoleIds(user.userID)]
   assignDialogVisible.value = true
 }
 
 async function submitAssign() {
   if (!assignTargetUser.value) return
-  const userId = assignTargetUser.value.id
+  const userId = assignTargetUser.value.userID
   const oldRoleIds = getUserRoleIds(userId)
   const newRoleIds = checkedRoles.value
   const toAdd = newRoleIds.filter(id => !oldRoleIds.includes(id))
@@ -193,17 +211,18 @@ onMounted(() => { loadUsers(); loadRoles(); loadUserRoles() })
             <el-table-column prop="userName" label="昵称" min-width="110" />
             <el-table-column label="已分配角色" min-width="260">
               <template #default="{ row }">
-                <el-tag v-for="roleId in getUserRoleIds(row.id)" :key="roleId" closable type="primary" style="margin: 2px 4px 2px 0;" @close="handleRemoveRole(row.id, roleId)">{{ getRoleName(roleId) }}</el-tag>
-                <span v-if="getUserRoleIds(row.id).length === 0" style="color: #999; font-size: 13px;">暂未分配</span>
+                <el-tag v-for="roleId in getUserRoleIds(row.userID)" :key="roleId" closable type="primary" style="margin: 2px 4px 2px 0;" @close="handleRemoveRole(row.userID, roleId)">{{ getRoleName(roleId) }}</el-tag>
+                <span v-if="getUserRoleIds(row.userID).length === 0" style="color: #999; font-size: 13px;">暂未分配</span>
               </template>
             </el-table-column>
             <el-table-column label="状态" width="80" align="center">
               <template #default="{ row }"><el-tag :type="row.isDel ? 'danger' : 'success'" size="small">{{ row.isDel ? '禁用' : '启用' }}</el-tag></template>
             </el-table-column>
-            <el-table-column label="操作" width="170" align="center" fixed="right">
+            <el-table-column label="操作" width="240" align="center" fixed="right">
               <template #default="{ row }">
                 <el-button type="primary" link size="small" @click="openEditUser(row)">修改</el-button>
                 <el-button type="primary" link size="small" @click="openAssignDialog(row)">分配角色</el-button>
+                <el-button :disabled="row.isDel" type="danger" link size="small" @click="handleDeleteUser(row)">禁用</el-button>
               </template>
             </el-table-column>
           </el-table>

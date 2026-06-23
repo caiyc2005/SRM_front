@@ -139,7 +139,7 @@ async function submitForm() {
 
   if (isEdit.value) {
     try {
-      const res = await apiPut('UpdateSupplier', { supplierID: form.supplierID, ...data })
+      const res = await apiPost('UpdateSupplier', { supplierID: form.supplierID, ...data })
       if (res.success) { ElMessage.success('供应商信息已更新'); dialogVisible.value = false; await loadSuppliers(); return }
       ElMessage.error(res.message || '更新失败')
     } catch {
