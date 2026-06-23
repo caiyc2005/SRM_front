@@ -41,7 +41,7 @@ const filteredOrders = computed(() => {
   if (kw) {
     list = list.filter(o =>
       o.orderCode.toLowerCase().includes(kw.toLowerCase()) ||
-      (o.deliveryNo && o.deliveryNo.toLowerCase().includes(kw.toLowerCase()))
+      (o.noteCode && o.noteCode.toLowerCase().includes(kw.toLowerCase()))
     )
   }
   return list
@@ -118,7 +118,7 @@ function handleReceive(row) {
                     <div><span>供应商：</span><b>{{ row.supplierName }}</b></div>
                     <div><span>订单状态：</span><b>{{ getStatusText(row.status) }}</b></div>
                     <div><span>总金额：</span><b class="red-price">¥{{ row.totalAmount }}</b></div>
-                    <div><span>送货单号：</span><b style="color: #1890ff">{{ row.deliveryNo || '—' }}</b></div>
+                    <div><span>送货单号：</span><b style="color: #1890ff">{{ row.noteCode || '—' }}</b></div>
                     <div><span>创建时间：</span><b>{{ row.createTime }}</b></div>
                   </div>
                   <el-table :data="row.materials" size="small" border style="width: 100%">
@@ -136,9 +136,9 @@ function handleReceive(row) {
 
             <el-table-column prop="orderCode" label="订单编号" width="160" align="center" />
             <el-table-column prop="supplierName" label="供应商" min-width="160" />
-            <el-table-column prop="deliveryNo" label="送货单号" width="180" align="center">
+            <el-table-column prop="noteCode" label="送货单号" width="180" align="center">
               <template #default="{ row }">
-                <span v-if="row.deliveryNo" style="color: #1890ff;">{{ row.deliveryNo }}</span>
+                <span v-if="row.noteCode" style="color: #1890ff;">{{ row.noteCode }}</span>
                 <span v-else style="color: #999;">—</span>
               </template>
             </el-table-column>

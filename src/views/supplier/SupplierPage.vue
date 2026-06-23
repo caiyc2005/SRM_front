@@ -121,12 +121,12 @@ async function submitForm() {
   if (!form.supplierName.trim()) { ElMessage.warning('供应商名称不能为空'); return }
   if (!form.people.trim()) { ElMessage.warning('联系人不能为空'); return }
   if (!form.phoneNumber.trim()) { ElMessage.warning('联系电话不能为空'); return }
-  if (selectedRegion.value.length === 0 && !detailAddress.value.trim()) {
-    ElMessage.warning('请选择省市区或填写详细地址')
-    return
-  }
-
-  const fullAddress = selectedRegion.value.join('') + (detailAddress.value.trim() ? ' ' + detailAddress.value.trim() : '')
+  //地址非必填
+// if (selectedRegion.value.length === 0 && !detailAddress.value.trim()) {
+//     ElMessage.warning('请选择省市区或填写详细地址')
+//     return
+//   }
+  const fullAddress = (selectedRegion.value.length ? selectedRegion.value.join('') : '') + (detailAddress.value.trim() ? ' ' + detailAddress.value.trim() : '')
 
   const data = {
     supplierCode: form.supplierCode.trim(),

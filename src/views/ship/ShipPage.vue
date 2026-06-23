@@ -56,31 +56,33 @@ async function loadShipOrders() {
     params.append('pageSize', '999') // 一次性拉取，客户端筛选
 
     const token = localStorage.getItem('token')
-    const res = await fetch(`${API_BASE}/GetOrdersByList?${params}`, {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    const res = await fetch(`/api/Delivery/GetDeliveryNote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ page: 1, pageSize: 999 })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
 
-    if (result.success && result.data) {
-      allOrders.value = (result.data.list || []).map(o => ({
-        orderID: o.orderID,
-        orderCode: o.orderCode,
-        supplierID: o.supplierID,
-        supplierName: o.supplierName,
-        status: String(o.status),
-        materialCount: o.orderDetails?.length || 0,
-        totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
-        createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
-        deliveryNo: '',
-        materials: (o.orderDetails || []).map((od, i) => ({
+    if (result.code === 200 && result.data) {
+      allOrders.value = (result.data.items || []).map(item => ({
+        orderID: item.orderID ,//|| item.noteID,
+        orderCode: item.noteCode,
+        supplierID: item.supplierID || '',
+        supplierName: item.supplierName || '',
+        status: String(item.orderStatus ?? (item.status ? 3 : 2)),
+        materialCount: item.details?.length || 0,
+        totalAmount: '0.00',
+        createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
+        noteCode: item.noteCode || '',
+        materials: (item.details || []).map((dd, i) => ({
           index: i + 1,
-          materialCode: od.materialCode,
-          materialName: od.materialName,
-          spec: od.spec || '',
-          qty: od.qty,
-          unitPrice: od.unitPrice,
-          amount: od.amount
+          materialCode: dd.materialCode || '',
+          materialName: dd.materialName || '',
+          spec: '',
+          qty: dd.quantity || 0,
+          unitPrice: 0,
+          amount: 0
         }))
       }))
       useApi.value = true
@@ -112,7 +114,7 @@ const filteredOrders = computed(() => {
   if (kw) {
     list = list.filter(o =>
       o.orderCode.toLowerCase().includes(kw.toLowerCase()) ||
-      (o.deliveryNo && o.deliveryNo.toLowerCase().includes(kw.toLowerCase()))
+      (o.noteCode && o.noteCode.toLowerCase().includes(kw.toLowerCase()))
     )
   }
   if (query.shipFilter === 'pending') {
@@ -211,8 +213,8 @@ async function handleShip(row) {
                     <div><span>订单状态：</span><b>{{ getStatusText(row.status) }}</b></div>
                     <div><span>总金额：</span><b class="red-price">¥{{ row.totalAmount }}</b></div>
                     <div><span>创建时间：</span><b>{{ row.createTime }}</b></div>
-                    <div v-if="row.deliveryNo">
-                      <span>送货单号：</span><b style="color: #1890ff">{{ row.deliveryNo }}</b>
+                    <div v-if="row.noteCode">
+                      <span>送货单号：</span><b style="color: #1890ff">{{ row.noteCode }}</b>
                     </div>
                   </div>
                   <el-table :data="row.materials" size="small" border style="width: 100%">
@@ -230,9 +232,9 @@ async function handleShip(row) {
 
             <el-table-column prop="orderCode" label="订单编号" width="160" align="center" />
             <el-table-column prop="supplierName" label="供应商" min-width="160" />
-            <el-table-column prop="deliveryNo" label="送货单号" width="180" align="center">
+            <el-table-column prop="noteCode" label="送货单号" width="180" align="center">
               <template #default="{ row }">
-                <span v-if="row.deliveryNo" style="color: #1890ff;">{{ row.deliveryNo }}</span>
+                <span v-if="row.noteCode" style="color: #1890ff;">{{ row.noteCode }}</span>
                 <span v-else style="color: #999;">—</span>
               </template>
             </el-table-column>
