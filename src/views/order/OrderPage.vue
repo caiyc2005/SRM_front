@@ -109,6 +109,7 @@ async function loadOrders() {
       tableData.value = (d.list || []).map(o => ({
         ...o,
         status: String(o.status),
+        createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
         materialCount: o.orderDetails?.length || 0,
         totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
         deliveryNo: o.deliveryNo || '',
