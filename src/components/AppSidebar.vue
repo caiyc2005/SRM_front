@@ -59,7 +59,8 @@ const menuItems = [
     children: [
       { key: 'basic-user', label: '用户管理', path: '/basic/user' },
       { key: 'basic-role', label: '角色管理', path: '/basic/role' },
-      { key: 'supplier', label: '供应商管理', path: '/supplier' }
+      { key: 'supplier', label: '供应商管理', path: '/supplier' },
+      { key: 'material', label: '物料管理', path: '/basic/material' }
     ]
   },
   {
