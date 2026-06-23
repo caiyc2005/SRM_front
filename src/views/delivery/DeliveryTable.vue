@@ -41,7 +41,7 @@ function downloadBarcode(deliveryNo) {
             <div class="detail-title">送货单基础信息</div>
             <div class="detail-info">
               <div><span>送货单号：</span><b>{{ props.row.deliveryNo }}</b></div>
-              <div><span>对应订单号：</span><b>{{ props.row.orderNo }}</b></div>
+              <div><span>对应订单号：</span><b>{{ props.row.orderCode }}</b></div>
               <div><span>供应商：</span><b>{{ props.row.supplierName }}</b></div>
               <div><span>收货状态：</span><b>{{ getStatusText(props.row.status) }}</b></div>
               <div><span>创建时间：</span><b>{{ props.row.createTime }}</b></div>
@@ -82,7 +82,7 @@ function downloadBarcode(deliveryNo) {
       </el-table-column>
 
       <el-table-column prop="deliveryNo" label="送货单号" width="180" align="center" resizable="false" />
-      <el-table-column prop="orderNo" label="对应订单号" width="180" align="center" resizable="false" />
+      <el-table-column prop="orderCode" label="对应订单号" width="180" align="center" resizable="false" />
       <el-table-column prop="supplierName" label="供应商名称" min-width="200" align="center" resizable="false" />
       <el-table-column label="收货状态" width="100" align="center" resizable="false">
         <template #default="scope">
@@ -108,7 +108,6 @@ function downloadBarcode(deliveryNo) {
         </template>
       </el-table-column>
     </el-table>
-
     <!-- 分页 -->
     <AppPagination :total="total" :query="query" @change="emit('pageChange')" />
   </div>

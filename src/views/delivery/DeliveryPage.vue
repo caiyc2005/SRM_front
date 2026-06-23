@@ -1,5 +1,7 @@
 <script setup>
 import { reactive, ref, computed, onMounted, watch } from 'vue'
+
+// 已有 computed 导入
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -34,7 +36,8 @@ async function loadSuppliers() {
 
 const query = reactive({
   deliveryNo: '',
-  orderNo: '',
+  // orderNo: '',
+  orderCode: '',
   supplierId: '',
   status: '',
   pageNum: 1,
@@ -50,12 +53,13 @@ const deliveryStatusOptions = [
   { label: '未收货', value: '0' },
   { label: '已收货', value: '1' }
 ]
-const deliveryFilterFields = [
+// 送货单筛选显示字段
+const deliveryFilterFields = computed(() => [
   { key: 'deliveryNo', label: '送货单号', type: 'input', width: 220 },
-  { key: 'orderNo', label: '对应订单号', type: 'input', width: 220 },
+  { key: 'orderCode', label: '对应订单号', type: 'input', width: 220 },
   { key: 'supplierId', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'supplierName', valueKey: 'supplierID' },
   { key: 'status', label: '收货状态', type: 'select', width: 180, options: deliveryStatusOptions }
-]
+])
 
 // 打印相关
 const printVisible = ref(false)
@@ -65,7 +69,7 @@ const currentDelivery = ref({})
 const filteredData = computed(() => {
   let data = [...mockData.value]
   if (query.deliveryNo) data = data.filter(item => item.deliveryNo.includes(query.deliveryNo))
-  if (query.orderNo) data = data.filter(item => item.orderNo.includes(query.orderNo))
+  if (query.orderCode) data = data.filter(item => (item.orderCode || '').includes(query.orderCode))
   if (query.supplierId) data = data.filter(item => item.supplierId === query.supplierId)
   if (query.status !== '' && query.status != null) data = data.filter(item => item.status === query.status)
   return data
@@ -81,6 +85,7 @@ async function loadDeliveries() {
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
       body: JSON.stringify({
         noteCode: query.deliveryNo || undefined,
+        orderCode: query.orderCode || undefined,//把orderCode字段传给后端
         supplierId: query.supplierId || undefined,
         status: query.status !== '' && query.status != null ? (query.status === '1') : undefined,
         page: query.pageNum,
@@ -96,7 +101,7 @@ async function loadDeliveries() {
       tableData.value = (d.items || []).map(item => ({
         id: item.noteID,
         deliveryNo: item.noteCode,
-        orderNo: item.orderID || '',
+        orderCode: item.orderCode || '',
         supplierId: item.supplierID || '',
         supplierCode: '',
         supplierName: item.supplierName || '',
@@ -138,7 +143,7 @@ function handleQuery() {
 
 function handleReset() {
   query.deliveryNo = ''
-  query.orderNo = ''
+  query.orderCode = ''
   query.supplierId = ''
   query.status = ''
   query.pageNum = 1

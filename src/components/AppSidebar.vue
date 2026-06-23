@@ -1,9 +1,30 @@
 <script setup>
 import { useRouter, useRoute } from 'vue-router'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
+
+// 待确认订单计数
+const pendingCount = ref(0)
+
+async function fetchPendingCount() {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch('/api/Orders/GetOrdersByList?status=0&pageIndex=1&pageSize=1', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+    if (result.success && result.data) {
+      pendingCount.value = result.data.total || 0
+    }
+  } catch { /* 静默失败 */ }
+}
+
+onMounted(() => {
+  fetchPendingCount()
+})
 
 const menuItems = [
   {
@@ -19,8 +40,9 @@ const menuItems = [
     key: 'order',
     label: '📋 采购订单管理',
     children: [
+      { key: 'order-query', label: '采购订单一览表', path: '/order/query' },
       { key: 'order-pending', label: '待确认列表', path: '/order/pending' },
-      { key: 'order-query', label: '采购订单查询', path: '/order/query' }
+      
     ]
   },
   {
@@ -101,6 +123,7 @@ watch(() => route.path, () => {
           @click="handleMenuClick(child)"
         >
           {{ child.label }}
+          <span v-if="child.key === 'order-pending' && pendingCount > 0" class="badge">{{ pendingCount }}</span>
         </div>
       </template>
       <!-- 无子菜单的普通项 -->
@@ -166,5 +189,19 @@ watch(() => route.path, () => {
   margin-right: 4px;
   font-size: 10px;
   transition: transform 0.2s;
+}
+.badge {
+  display: inline-block;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  background: #f56c6c;
+  color: #fff;
+  font-size: 11px;
+  border-radius: 9px;
+  text-align: center;
+  vertical-align: middle;
 }
 </style>
