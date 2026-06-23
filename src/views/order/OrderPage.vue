@@ -7,7 +7,7 @@
 import { reactive, ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 import AppSidebar from '@/components/AppSidebar.vue'
 import AppFilter from '@/components/AppFilter.vue'
@@ -48,7 +48,6 @@ const query = reactive({
   pageSize: 10
 })
 
-const mockData = ref([])
 const tableData = ref([])
 const total = ref(0)
 
@@ -90,15 +89,6 @@ const createForm = reactive({
   supplierID: '',
   materials: [],
   remark: ''
-})
-
-// ============ 计算属性 ============
-const filteredData = computed(() => {
-  let data = [...mockData.value]
-  if (query.orderCode) data = data.filter(item => item.orderCode.includes(query.orderCode))
-  if (query.supplierID) data = data.filter(item => item.supplierID === query.supplierID)
-  if (query.status) data = data.filter(item => item.status === query.status)
-  return data
 })
 
 // ============ 方法 ============
@@ -172,29 +162,86 @@ function handleReset() {
   loadOrders()
 }
 
-function handleExport() {
-  const data = filteredData.value
+/** 列宽自适应：根据表头和内容计算最大宽度 */
+function calcColWidths(headers, rows) {
+  return headers.map((h, i) => {
+    let maxLen = h.length * 2
+    for (const row of rows) {
+      const val = String(row[i] ?? '')
+      const len = [...val].reduce((s, c) => s + (c.charCodeAt(0) > 127 ? 2 : 1), 0)
+      if (len > maxLen) maxLen = len
+    }
+    return { width: Math.min(maxLen + 4, 60) }
+  })
+}
+
+async function handleExport() {
+  const data = tableData.value
   if (data.length === 0) {
     ElMessage.warning('暂无数据可导出')
     return
   }
 
-  const exportList = data.map(item => ({
-    '订单编号': item.orderCode,
-    '供应商名称': item.supplierName,
-    '订单状态': getStatusText(item.status),
-    '物料种类': item.materialCount,
-    '订单总金额(元)': item.totalAmount,
-    '创建时间': item.createTime
-  }))
+  const headers = ['订单编号', '供应商名称', '订单状态', '物料种类', '订单总金额(元)', '创建时间']
 
-  const worksheet = XLSX.utils.json_to_sheet(exportList)
-  const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, worksheet, '采购订单')
-  XLSX.writeFile(
-    workbook,
-    `采购订单列表_${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}.xlsx`
-  )
+  const rows = data.map(item => [
+    item.orderCode,
+    item.supplierName,
+    getStatusText(item.status),
+    item.materialCount,
+    item.totalAmount,
+    item.createTime
+  ])
+
+  const workbook = new ExcelJS.Workbook()
+  workbook.creator = 'SRM系统'
+  workbook.created = new Date()
+
+  const sheet = workbook.addWorksheet('采购订单')
+
+  // 先设列宽（必须在写入数据前）
+  sheet.columns = calcColWidths(headers, rows)
+
+  // 写入表头
+  const headerRow = sheet.addRow(headers)
+  headerRow.font = { name: '微软雅黑', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF409EFF' } }
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' }
+  headerRow.border = {
+    top: { style: 'thin' }, bottom: { style: 'thin' },
+    left: { style: 'thin' }, right: { style: 'thin' }
+  }
+  headerRow.height = 28
+
+  // 写入数据行
+  rows.forEach((row, idx) => {
+    const dataRow = sheet.addRow(row)
+    dataRow.font = { name: '微软雅黑', size: 10.5 }
+    dataRow.alignment = { vertical: 'middle', horizontal: 'center' }
+    dataRow.border = {
+      top: { style: 'thin' }, bottom: { style: 'thin' },
+      left: { style: 'thin' }, right: { style: 'thin' }
+    }
+    dataRow.height = 24
+    // 偶数行浅色背景
+    if (idx % 2 === 1) {
+      dataRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F7FA' } }
+    }
+  })
+
+  // 导出
+  let userName = ''
+  try { userName = JSON.parse(localStorage.getItem('userInfo') || '{}').userName || '' } catch {}
+  const dateStr = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}`
+  const fileName = `采购订单列表_${userName}_${dateStr}.xlsx`
+  const buffer = await workbook.xlsx.writeBuffer()
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  a.click()
+  URL.revokeObjectURL(url)
   ElMessage.success('导出成功')
 }
 
