@@ -267,10 +267,55 @@ async function submitCreateOrder() {
 
   const supplier = supplierList.value.find(s => s.supplierID === createForm.supplierID)
 
+  // ========== 物料去重 + 价格一致性校验 ==========
+  const materialMap = new Map()
+  const priceConflicts = []
+
+  for (const item of validMaterials) {
+    const key = item.materialID
+    if (materialMap.has(key)) {
+      const existing = materialMap.get(key)
+      if (Number(existing.unitPrice) !== Number(item.unitPrice)) {
+        // 价格不一致 → 记录冲突
+        const mat = materialList.value.find(m => (m.materialID || m.materialCode) === key)
+        const name = mat?.materialName || key
+        let conflict = priceConflicts.find(c => c.materialID === key)
+        if (!conflict) {
+          conflict = { materialID: key, materialName: name, prices: [Number(existing.unitPrice)] }
+          priceConflicts.push(conflict)
+        }
+        if (!conflict.prices.includes(Number(item.unitPrice))) {
+          conflict.prices.push(Number(item.unitPrice))
+        }
+      } else {
+        // 价格一致 → 合并数量
+        existing.qty += item.qty
+      }
+    } else {
+      materialMap.set(key, { ...item })
+    }
+  }
+
+  if (priceConflicts.length > 0) {
+    let msg = '以下物料存在重复添加且单价不一致，请重新录入：<br><br>'
+    for (const c of priceConflicts) {
+      msg += `【${c.materialName}】单价：${c.prices.join('、')}<br>`
+    }
+    await ElMessageBox.alert(msg, '物料单价冲突', {
+      dangerouslyUseHTMLString: true,
+      type: 'warning',
+      confirmButtonText: '知道了'
+    })
+    return
+  }
+
+  // 使用合并后的物料列表
+  const merged = Array.from(materialMap.values())
+
   const orderData = {
     SupplierID: String(createForm.supplierID),
     SupplierName: supplier ? supplier.supplierName : '',
-    Materials: validMaterials.map(item => ({
+    Materials: merged.map(item => ({
       MaterialID: item.materialID,
       Qty: item.qty,
       UnitPrice: Number(item.unitPrice.toFixed(2))
@@ -305,7 +350,7 @@ async function submitCreateOrder() {
 
   // 后端创建成功后，同步添加到本地 mock 列表以便显示
   let totalAmount = 0
-  const materials = validMaterials.map((item, index) => {
+  const materials = merged.map((item, index) => {
     const amount = (item.qty * item.unitPrice).toFixed(2)
     totalAmount += Number(amount)
     const mat = materialList.value.find(m => (m.materialID || m.materialCode) === item.materialID)
@@ -468,7 +513,6 @@ watch(() => route.path, () => {
           :total="total"
           :query="query"
           action-type="all"
-          :hide-confirm="!isPendingMode() && !isPendingDeliveryMode()"
           :hide-status="isPendingMode() || isPendingDeliveryMode()"
           @confirm="handleConfirm"
           @generate-delivery="handleGenerateDelivery"

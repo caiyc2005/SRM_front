@@ -411,12 +411,9 @@ async function loadPendingOrders() {
         materialCount: o.orderDetails?.length || 0,
         totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
         createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
-<<<<<<< HEAD
         // 送货单号优先从送货单接口获取，其次从订单接口获取
         deliveryNo: deliveryMap.get(o.orderID) || o.deliveryNo || '',
-=======
         noteCode: o.noteCode || '',
->>>>>>> cd087b30dd25b2f7a1510aead2411f4802ceb141
         materials: (o.orderDetails || []).map((od, i) => ({
           index: i + 1,
           materialCode: od.materialCode,
