@@ -375,9 +375,29 @@ function handleReceive(row) {
 async function loadPendingOrders() {
   try {
     const token = localStorage.getItem('token')
-    const res = await fetch(`${API_ORDERS}/GetOrdersByList?status=3&pageIndex=1&pageSize=999`, {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    })
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
+
+    // 1️⃣ 先拉送货单列表，建立 orderID → 送货单号 的映射
+    const deliveryMap = new Map()
+    try {
+      const dRes = await fetch(`${API_DELIVERY}/GetDeliveryNote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ page: 1, pageSize: 999 })
+      })
+      const dText = await dRes.text()
+      const dResult = dText ? JSON.parse(dText) : {}
+      if (dResult.code === 200 && dResult.data?.items?.length) {
+        for (const item of dResult.data.items) {
+          if (item.orderID && item.noteCode) {
+            deliveryMap.set(item.orderID, item.noteCode)
+          }
+        }
+      }
+    } catch { /* 送货单接口不可用，不影响主流程 */ }
+
+    // 2️⃣ 拉已发货订单列表
+    const res = await fetch(`${API_ORDERS}/GetOrdersByList?status=3&pageIndex=1&pageSize=999`, { headers })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
 
@@ -391,7 +411,8 @@ async function loadPendingOrders() {
         materialCount: o.orderDetails?.length || 0,
         totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
         createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
-        deliveryNo: o.deliveryNo || '',
+        // 送货单号优先从送货单接口获取，其次从订单接口获取
+        deliveryNo: deliveryMap.get(o.orderID) || o.deliveryNo || '',
         materials: (o.orderDetails || []).map((od, i) => ({
           index: i + 1,
           materialCode: od.materialCode,
