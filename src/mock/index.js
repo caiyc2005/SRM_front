@@ -1,23 +1,14 @@
 /**
- * mock/index.js
+ * mock/index.js — 空占位
  *
- * 模拟数据统一导出。
- * 后续切换到真实 API 后，删除整个 src/mock/ 目录即可。
+ * 后端连通后，所有页面降级到此处的空值。
+ * 数据完全由 API 提供时，删除整个 mock 目录即可。
  */
 
-
-
-//如果需要再恢复
-
-// export {
-//   DEFAULT_SUPPLIERS,
-//   DEFAULT_MATERIALS,
-//   initMockOrders,
-//   deliverySeq
-// } from './orderData.js'
-
-// export {
-//   MOCK_USERS,
-//   MOCK_ROLES,
-//   MOCK_USER_ROLES
-// } from './userData.js'
+export const DEFAULT_SUPPLIERS = []
+export const DEFAULT_MATERIALS = []
+export function initMockOrders() { return [] }
+export const deliverySeq = { value: 1 }
+export const MOCK_USERS = []
+export const MOCK_ROLES = []
+export const MOCK_USER_ROLES = []

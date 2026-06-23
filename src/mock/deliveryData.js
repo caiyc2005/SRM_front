@@ -5,7 +5,9 @@
  */
 
 
-//如果需要再恢复
+// 如果需要再恢复
+
+
 
 // import { DEFAULT_SUPPLIERS } from './orderData.js'
 
@@ -52,3 +54,6 @@
 //   }
 //   return data
 // }
+
+/* API 连通后，降级到此空函数 */
+export function initMockDeliveries() { return [] }
