@@ -73,7 +73,9 @@ async function loadShipOrders() {
         supplierName: item.supplierName || '',
         status: String(item.orderStatus ?? (item.status ? 3 : 2)),
         materialCount: item.details?.length || 0,
-        totalAmount: '0.00',
+        totalAmount: item.totalAmount
+          ? Number(item.totalAmount).toFixed(2)
+          : (item.details || []).reduce((s, dd) => s + (dd.amount || (dd.quantity || 0) * (dd.unitPrice || 0) || 0), 0).toFixed(2),
         createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
         noteCode: item.noteCode || '',
         materials: (item.details || []).map((dd, i) => ({
@@ -83,8 +85,8 @@ async function loadShipOrders() {
           spec: dd.spec || '',
           unit: dd.unit || '',
           qty: dd.quantity || 0,
-          unitPrice: 0,
-          amount: 0
+          unitPrice: dd.unitPrice || 0,
+          amount: dd.amount || 0
         }))
       }))
       useApi.value = true
