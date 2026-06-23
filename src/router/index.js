@@ -11,6 +11,7 @@ import MaterialManagement from '@/views/basic/MaterialManagement.vue'
 import InventoryPage from '@/views/basic/InventoryPage.vue'
 import WarehousePage from '@/views/basic/WarehousePage.vue'
 import CreateOrderPage from '@/views/order/CreateOrderPage.vue'
+import DeliveryPrintPage from '@/views/delivery/DeliveryPrintPage.vue'
 
 const routes = [
   {
@@ -50,6 +51,11 @@ const routes = [
     path: '/delivery',
     name: 'Delivery',
     component: DeliveryPage
+  },
+  {
+    path: '/delivery/print',
+    name: 'DeliveryPrint',
+    component: DeliveryPrintPage
   },
   {
     path: '/ship',

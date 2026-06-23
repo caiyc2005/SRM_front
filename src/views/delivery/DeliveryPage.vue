@@ -191,10 +191,6 @@ function handlePrint(row) {
   printVisible.value = true
 }
 
-function confirmPrint() {
-  window.print()
-}
-
 // ============ 生命周期 ============
 onMounted(() => {
   loadSuppliers()
@@ -239,7 +235,6 @@ watch(
       :visible="printVisible"
       :delivery="currentDelivery"
       @update:visible="printVisible = $event"
-      @print="confirmPrint"
     />
   </div>
 </template>

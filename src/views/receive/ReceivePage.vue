@@ -35,6 +35,22 @@ const searchNoteCode = ref('')
 const foundDelivery = ref(null)       // 查到的送货单
 const notFound = ref(false)           // 是否查无此单
 const receiveFormItems = ref([])      // 可编辑的物料行 [{...deliveryItem, receivedQty: 0}]
+const wareList = ref([])              // 仓库列表
+const selectedWareID = ref('')        // 选中的仓库ID
+
+async function loadWarehouses() {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch('/api/Warehouse/GetAllWarehouse', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+    if (result.success && result.data?.length) {
+      wareList.value = result.data
+    }
+  } catch { /* 仓库接口不可用 */ }
+}
 
 /** 按送货单号查找 */
 async function handleSearch() {
@@ -130,6 +146,11 @@ async function handleConfirmReceive() {
   const delivery = foundDelivery.value
   const items = receiveFormItems.value
 
+  if (!selectedWareID.value) {
+    ElMessage.warning('请选择入库仓库')
+    return
+  }
+
   // 基本校验
   for (const item of items) {
     if (item.receivedQty == null || item.receivedQty === '') {
@@ -170,6 +191,7 @@ async function handleConfirmReceive() {
         headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
         body: JSON.stringify({
           noteCode: delivery.noteCode,
+          wareID: selectedWareID.value,
           receiveUserID: userInfo.userID || '',
           receiveUserName: userInfo.userName || '仓管员',
           details: items.map(i => ({
@@ -598,6 +620,7 @@ onMounted(() => {
   loadSuppliers()
   loadReceiveRecords()
   loadPendingOrders()
+  loadWarehouses()
 
   // 初始化送货单数据（用于扫码快捷选择等本地查找）
   allDeliveries.value = initMockDeliveries()
@@ -683,6 +706,22 @@ onMounted(() => {
                     {{ foundDelivery.createTime }}
                   </el-descriptions-item>
                 </el-descriptions>
+
+                <div style="margin: 16px 0; display: flex; align-items: center; gap: 12px;">
+                  <span style="font-size: 14px; font-weight: 500;">入库仓库：</span>
+                  <el-select
+                    v-model="selectedWareID"
+                    placeholder="请选择入库仓库"
+                    style="width: 250px"
+                  >
+                    <el-option
+                      v-for="w in wareList"
+                      :key="w.wareID"
+                      :label="`${w.wareCode} - ${w.name}`"
+                      :value="w.wareID"
+                    />
+                  </el-select>
+                </div>
 
                 <div class="section-title">物料明细 — 请核对实物并填写实际收货数量</div>
 
