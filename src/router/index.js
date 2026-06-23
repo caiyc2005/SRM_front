@@ -8,6 +8,8 @@ import ReceivePage from '@/views/receive/ReceivePage.vue'
 import UserManagement from '@/views/basic/UserManagement.vue'
 import RoleManagement from '@/views/basic/RoleManagement.vue'
 import MaterialManagement from '@/views/basic/MaterialManagement.vue'
+import InventoryPage from '@/views/basic/InventoryPage.vue'
+import WarehousePage from '@/views/basic/WarehousePage.vue'
 
 const routes = [
   {
@@ -73,6 +75,16 @@ const routes = [
     path: '/basic/material',
     name: 'MaterialManagement',
     component: MaterialManagement
+  },
+  {
+    path: '/basic/inventory',
+    name: 'Inventory',
+    component: InventoryPage
+  },
+  {
+    path: '/basic/warehouse',
+    name: 'Warehouse',
+    component: WarehousePage
   }
 ]
 

@@ -333,9 +333,9 @@ const pendingFilterFields = [
   { key: 'keyword', label: '关键字', type: 'input', width: 300, placeholder: '订单号 / 送货单号' }
 ]
 
-// 只显示已发货(status=3)的订单
+// 显示已发货(status=3)或待发货(status=2，已有送货单)的待收料订单
 const pendingReceiveOrders = computed(() => {
-  return allOrders.value.filter(o => o.status === '3')
+  return allOrders.value.filter(o => ['2', '3'].includes(o.status))
 })
 
 const filteredOrders = computed(() => {
@@ -406,8 +406,8 @@ async function loadPendingOrders() {
       }
     } catch { /* 送货单接口不可用，不影响主流程 */ }
 
-    // 2️⃣ 拉已发货订单列表
-    const res = await fetch(`${API_ORDERS}/GetOrdersByList?status=3&pageIndex=1&pageSize=999`, { headers })
+    // 2️⃣ 拉已发货 + 待发货订单列表（客户端筛选 status=2/3）
+    const res = await fetch(`${API_ORDERS}/GetOrdersByList?pageIndex=1&pageSize=999`, { headers })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
 
