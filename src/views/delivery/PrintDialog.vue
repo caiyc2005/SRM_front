@@ -21,7 +21,7 @@ const emit = defineEmits(['update:visible', 'print'])
       <div class="print-page" id="printArea">
         <div class="print-title">送 货 单</div>
         <div class="print-base">
-          <div>送货单号：{{ delivery.deliveryNo }}</div>
+          <div>送货单号：{{ delivery.noteCode }}</div>
           <div>对应订单号：{{ delivery.orderNo }}</div>
           <div>供应商编码：{{ delivery.supplierCode }}</div>
           <div>供应商名称：{{ delivery.supplierName }}</div>
@@ -57,8 +57,8 @@ const emit = defineEmits(['update:visible', 'print'])
         <div class="print-barcode">
           <div class="barcode-box">
             <BarcodeDisplay
-              v-if="delivery.deliveryNo"
-              :value="delivery.deliveryNo"
+              v-if="delivery.noteCode"
+              :value="delivery.noteCode"
               :width="160"
               :height="50"
             />

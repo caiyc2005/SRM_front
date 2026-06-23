@@ -111,7 +111,9 @@ async function loadOrders() {
     const params = new URLSearchParams()
     if (query.orderCode) params.append('orderCode', query.orderCode)
     if (query.supplierID) params.append('supplierID', query.supplierID)
-    if (isPendingDeliveryMode()) {
+    if (isPendingMode()) {
+      params.append('status', '0')
+    } else if (isPendingDeliveryMode()) {
       params.append('status', '1')
     } else if (query.status) {
       params.append('status', query.status)
@@ -135,7 +137,7 @@ async function loadOrders() {
         createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
         materialCount: o.orderDetails?.length || 0,
         totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
-        deliveryNo: o.deliveryNo || '',
+        noteCode: o.noteCode || '',
         materials: (o.orderDetails || []).map((od, i) => ({
           index: i + 1,
           materialCode: od.materialCode,
@@ -330,7 +332,7 @@ async function submitCreateOrder() {
     createTime: formatNow(),
     materials,
     memo: createForm.remark || '',
-    deliveryNo: ''
+    noteCode: ''
   }
 
   mockData.value.unshift(newOrder)
@@ -416,7 +418,7 @@ async function handleGenerateDelivery(row) {
     const newDeliveryNo = generateDeliveryNo(deliverySeq.value)
     deliverySeq.value++
     targetOrder.status = '2'
-    targetOrder.deliveryNo = newDeliveryNo
+    targetOrder.noteCode = newDeliveryNo
     ElMessage.success(`送货单生成成功，单号：${newDeliveryNo}（本地）`)
     loadTable()
   }

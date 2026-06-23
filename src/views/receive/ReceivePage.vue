@@ -66,7 +66,7 @@ async function handleSearch() {
       }
       notFound.value = false
       foundDelivery.value = {
-        deliveryNo: item.noteCode,
+        noteCode: item.noteCode,
         orderNo: item.orderID || '',
         supplierName: item.supplierName || '',
         supplierCode: '',
@@ -95,7 +95,7 @@ async function handleSearch() {
 
   // ========== 降级：从本地 mock 数据查找 ==========
   const result = allDeliveries.value.find(
-    d => d.deliveryNo.toLowerCase() === kw.toLowerCase()
+    d => d.noteCode.toLowerCase() === kw.toLowerCase()
   )
 
   if (!result) {
@@ -168,7 +168,7 @@ async function handleConfirmReceive() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
         body: JSON.stringify({
-          noteCode: delivery.deliveryNo,
+          noteCode: delivery.noteCode,
           receiveUserID: userInfo.userID || '',
           receiveUserName: userInfo.userName || '仓管员',
           details: items.map(i => ({
@@ -203,7 +203,7 @@ async function handleConfirmReceive() {
     recordId: 'REC' + String(receiveRecords.value.length + 1).padStart(3, '0'),
     recordCode: 'REC-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' +
       String(receiveRecords.value.length + 1).padStart(3, '0'),
-    noteCode: delivery.deliveryNo,
+    noteCode: delivery.noteCode,
     orderNo: delivery.orderNo,
     supplierName: delivery.supplierName || '—',
     operator: '仓管员',
@@ -334,7 +334,7 @@ const filteredOrders = computed(() => {
   if (kw) {
     list = list.filter(o =>
       o.orderCode.toLowerCase().includes(kw.toLowerCase()) ||
-      (o.deliveryNo && o.deliveryNo.toLowerCase().includes(kw.toLowerCase()))
+      (o.noteCode && o.noteCode.toLowerCase().includes(kw.toLowerCase()))
     )
   }
   return list
@@ -411,8 +411,12 @@ async function loadPendingOrders() {
         materialCount: o.orderDetails?.length || 0,
         totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
         createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
+<<<<<<< HEAD
         // 送货单号优先从送货单接口获取，其次从订单接口获取
         deliveryNo: deliveryMap.get(o.orderID) || o.deliveryNo || '',
+=======
+        noteCode: o.noteCode || '',
+>>>>>>> cd087b30dd25b2f7a1510aead2411f4802ceb141
         materials: (o.orderDetails || []).map((od, i) => ({
           index: i + 1,
           materialCode: od.materialCode,
@@ -569,10 +573,10 @@ function handleScanDialogClose() {
 }
 
 /** 快捷选择送货单（演示备用） */
-function quickSelectDelivery(deliveryNo) {
+function quickSelectDelivery(noteCode) {
   stopScanner()
   scanVisible.value = false
-  searchNoteCode.value = deliveryNo
+  searchNoteCode.value = noteCode
   handleSearch()
 }
 
@@ -653,7 +657,7 @@ onMounted(() => {
               <div v-if="foundDelivery" class="receive-detail">
                 <el-descriptions :column="3" border size="small" title="送货单信息">
                   <el-descriptions-item label="送货单号">
-                    <b style="color: #1890ff">{{ foundDelivery.deliveryNo }}</b>
+                    <b style="color: #1890ff">{{ foundDelivery.noteCode }}</b>
                   </el-descriptions-item>
                   <el-descriptions-item label="对应订单号">
                     {{ foundDelivery.orderNo }}
@@ -832,7 +836,7 @@ onMounted(() => {
                         <div><span>供应商：</span><b>{{ row.supplierName }}</b></div>
                         <div><span>订单状态：</span><b>{{ getStatusText(row.status) }}</b></div>
                         <div><span>总金额：</span><b class="red-price">¥{{ row.totalAmount }}</b></div>
-                        <div><span>送货单号：</span><b style="color: #1890ff">{{ row.deliveryNo || '—' }}</b></div>
+                        <div><span>送货单号：</span><b style="color: #1890ff">{{ row.noteCode || '—' }}</b></div>
                         <div><span>创建时间：</span><b>{{ row.createTime }}</b></div>
                       </div>
                       <el-table :data="row.materials" size="small" border style="width: 100%">
@@ -850,9 +854,9 @@ onMounted(() => {
 
                 <el-table-column prop="orderCode" label="订单编号" width="160" align="center" />
                 <el-table-column prop="supplierName" label="供应商" min-width="160" />
-                <el-table-column prop="deliveryNo" label="送货单号" width="180" align="center">
+                <el-table-column prop="noteCode" label="送货单号" width="180" align="center">
                   <template #default="{ row }">
-                    <span v-if="row.deliveryNo" style="color: #1890ff;">{{ row.deliveryNo }}</span>
+                    <span v-if="row.noteCode" style="color: #1890ff;">{{ row.noteCode }}</span>
                     <span v-else style="color: #999;">—</span>
                   </template>
                 </el-table-column>
@@ -940,14 +944,14 @@ onMounted(() => {
           <div class="quick-items">
             <el-button
               v-for="d in allDeliveries.slice(0, 8)"
-              :key="d.deliveryNo"
+              :key="d.noteCode"
               size="small"
               :type="d.status === '1' ? 'info' : 'primary'"
               :disabled="d.status === '1'"
               plain
-              @click="quickSelectDelivery(d.deliveryNo)"
+              @click="quickSelectDelivery(d.noteCode)"
             >
-              {{ d.deliveryNo }}
+              {{ d.noteCode }}
               <el-tag :type="d.status === '1' ? 'success' : 'warning'" size="small" style="margin-left: 6px">
                 {{ d.status === '1' ? '已收' : '未收' }}
               </el-tag>
