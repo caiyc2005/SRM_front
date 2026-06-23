@@ -313,35 +313,86 @@ async function submitCreateOrder() {
 }
 
 // ============ 订单操作 ============
-function handleConfirm(row) {
-  ElMessageBox.confirm(
-    `确认要将订单 ${row.orderCode} 标记为「已确认」状态吗？确认后将不可撤回。`,
-    '订单确认操作',
-    { type: 'warning' }
-  ).then(() => {
-    const targetOrder = mockData.value.find(item => item.orderID === row.orderID)
-    if (targetOrder) targetOrder.status = '1'
-    ElMessage.success('订单确认成功，状态已更新为「已确认」')
-    loadTable()
-  }).catch(() => {})
+async function handleConfirm(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确认要将订单 ${row.orderCode} 标记为「已确认」状态吗？确认后将不可撤回。`,
+      '订单确认操作',
+      { type: 'warning' }
+    )
+  } catch { return }
+
+  // ========== 优先调后端 API ==========
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_BASE}/ConfirmOrder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ id: row.orderID })
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.success) {
+      ElMessage.success('订单确认成功')
+      await loadOrders()
+      return
+    }
+    ElMessage.error(result.message || '确认失败')
+  } catch { /* 降级到本地 */ }
+
+  // ========== 降级：本地模拟 ==========
+  const targetOrder = mockData.value.find(item => item.orderID === row.orderID)
+  if (targetOrder) targetOrder.status = '1'
+  ElMessage.success('订单确认成功（本地）')
+  loadTable()
 }
 
-function handleGenerateDelivery(row) {
-  ElMessageBox.confirm(
-    `确认要为订单 ${row.orderCode} 生成送货单吗？生成后订单状态将更新为「待发货」。`,
-    '生成送货单',
-    { type: 'warning', confirmButtonText: '确认生成' }
-  ).then(() => {
-    const targetOrder = mockData.value.find(item => item.orderID === row.orderID)
-    if (targetOrder) {
-      const newDeliveryNo = generateDeliveryNo(deliverySeq.value)
-      deliverySeq.value++
-      targetOrder.status = '2'
-      targetOrder.deliveryNo = newDeliveryNo
-      ElMessage.success(`送货单生成成功，单号：${newDeliveryNo}`)
-      loadTable()
+async function handleGenerateDelivery(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确认要为订单 ${row.orderCode} 生成送货单吗？生成后订单状态将更新为「待发货」。`,
+      '生成送货单',
+      { type: 'warning', confirmButtonText: '确认生成' }
+    )
+  } catch { return }
+
+  // ========== 优先调后端 API ==========
+  try {
+    let userInfo = { userID: '', userName: '' }
+    try { userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}') } catch {}
+    const token = localStorage.getItem('token')
+
+    const res = await fetch('/api/Delivery/CreateDeliveryNote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({
+        orderID: row.orderID,
+        createByID: userInfo.userID || '',
+        createByName: userInfo.userName || ''
+      })
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.code === 200) {
+      ElMessage.success(`送货单生成成功，单号：${result.data?.noteCode || ''}`)
+      await loadOrders()
+      return
     }
-  }).catch(() => {})
+    ElMessage.error(result.message || '生成送货单失败')
+  } catch { /* 降级到本地 */ }
+
+  // ========== 降级：本地模拟 ==========
+  const targetOrder = mockData.value.find(item => item.orderID === row.orderID)
+  if (targetOrder) {
+    const newDeliveryNo = generateDeliveryNo(deliverySeq.value)
+    deliverySeq.value++
+    targetOrder.status = '2'
+    targetOrder.deliveryNo = newDeliveryNo
+    ElMessage.success(`送货单生成成功，单号：${newDeliveryNo}（本地）`)
+    loadTable()
+  }
 }
 
 // ============ 生命周期 ============
