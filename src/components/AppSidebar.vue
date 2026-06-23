@@ -22,10 +22,34 @@ async function fetchPendingCount() {
   } catch { /* 静默失败 */ }
 }
 
+// 轮询定时器
+let pollTimer = null
+
+function startPolling() {
+  stopPolling()
+  pollTimer = setInterval(fetchPendingCount, 60000)
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
 onMounted(() => {
   fetchPendingCount()
-  // 每 15 秒刷新一次未确认数量
-  setInterval(fetchPendingCount, 15000)
+  startPolling()
+
+  // 页面隐藏时暂停轮询，回到页面时恢复
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopPolling()
+    } else {
+      fetchPendingCount()   // 切回来时立即刷新一次
+      startPolling()
+    }
+  })
 })
 
 const menuItems = [
