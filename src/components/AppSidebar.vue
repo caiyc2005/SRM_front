@@ -82,8 +82,8 @@ const menuItems = [
   { key: 'ship', label: '🚚 供应商发货', path: '/ship' }
 ]
 
-// 默认展开采购订单管理
-const expandedKeys = ref(['order'])
+// 当前路由对应的父菜单（只展开当前活跃的菜单组）
+const expandedKeys = ref([])
 
 // 当前激活的子菜单项
 const activeMenu = computed(() => {
@@ -99,13 +99,13 @@ const activeMenu = computed(() => {
   return ''
 })
 
-// 切换展开/收起
+// 切换展开/收起（手风琴：一次只展开一个菜单组）
 function toggleExpand(key) {
   const idx = expandedKeys.value.indexOf(key)
   if (idx >= 0) {
-    expandedKeys.value.splice(idx, 1)
+    expandedKeys.value.splice(idx, 1) // 已展开则收起
   } else {
-    expandedKeys.value.push(key)
+    expandedKeys.value = [key] // 展开当前组，收起其他
   }
 }
 
@@ -113,13 +113,14 @@ function handleMenuClick(item) {
   if (item.path) router.push(item.path)
 }
 
-// 自动展开当前路由对应的父菜单
+// 自动展开当前路由对应的父菜单，收起其他所有菜单组
 watch(() => route.path, () => {
+  expandedKeys.value = []
   for (const item of menuItems) {
     if (item.children) {
-      const isActive = item.children.some(c => c.path === route.path)
-      if (isActive && !expandedKeys.value.includes(item.key)) {
+      if (item.children.some(c => c.path === route.path)) {
         expandedKeys.value.push(item.key)
+        break
       }
     }
   }
