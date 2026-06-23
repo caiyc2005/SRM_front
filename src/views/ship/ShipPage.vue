@@ -80,6 +80,7 @@ async function loadShipOrders() {
           materialCode: dd.materialCode || '',
           materialName: dd.materialName || '',
           spec: '',
+          unit: dd.unit || '',
           qty: dd.quantity || 0,
           unitPrice: 0,
           amount: 0
@@ -222,7 +223,11 @@ async function handleShip(row) {
                     <el-table-column prop="materialCode" label="物料编码" width="120" align="center" />
                     <el-table-column prop="materialName" label="物料名称" width="180" align="center" />
                     <el-table-column prop="spec" label="规格" width="120" align="center" />
-                    <el-table-column prop="qty" label="采购数量" align="center" />
+                    <el-table-column label="采购数量" align="center">
+                      <template #default="{ row }">
+                        {{ row.qty }}<span v-if="row.unit" style="color: #909399; margin-left: 2px">{{ row.unit }}</span>
+                      </template>
+                    </el-table-column>
                     <el-table-column prop="unitPrice" label="单价" align="center" />
                     <el-table-column prop="amount" label="金额" align="center" />
                   </el-table>

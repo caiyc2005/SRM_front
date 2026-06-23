@@ -143,6 +143,7 @@ async function loadOrders() {
           materialCode: od.materialCode,
           materialName: od.materialName,
           spec: od.spec || '',
+          unit: od.unit || '',
           qty: od.qty,
           unitPrice: od.unitPrice,
           amount: od.amount
@@ -360,6 +361,7 @@ async function submitCreateOrder() {
       materialCode: mat?.materialCode || item.materialID,
       materialName: mat?.materialName || item.materialID,
       spec: '标准规格',
+      unit: mat?.unit || '',
       qty: item.qty,
       unitPrice: item.unitPrice.toFixed(2),
       amount

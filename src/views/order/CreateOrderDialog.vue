@@ -98,19 +98,17 @@ function getMaterialUnit(materialID) {
               {{ getMaterialSpec(scope.row.materialID) }}
             </template>
           </el-table-column>
-          <el-table-column label="单位" width="70" align="center">
-            <template #default="scope">
-              {{ getMaterialUnit(scope.row.materialID) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="数量" width="90">
+          <el-table-column label="数量" width="140">
             <template #default="scope">
               <el-input-number
                 v-model="scope.row.qty"
-                :min="1"
+                :min="0.01"
+                :step="0.01"
+                :precision="2"
                 size="small"
                 style="width: 100%"
               />
+              <span style="margin-left: 4px; color: #909399;">{{ getMaterialUnit(scope.row.materialID) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="单价(元)" width="110">
