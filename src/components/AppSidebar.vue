@@ -44,7 +44,7 @@ const menuItems = [
     children: [
       { key: 'order-query', label: '订单一览表', path: '/order/query' },
       { key: 'order-pending', label: '待确认列表', path: '/order/pending' },
-      
+      { key: 'order-pending-delivery', label: '生成送货单', path: '/order/pending-delivery' },
     ]
   },
   {

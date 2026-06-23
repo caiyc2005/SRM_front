@@ -28,6 +28,11 @@ const routes = [
     component: OrderPage
   },
   {
+    path: '/order/pending-delivery',
+    name: 'OrderPendingDelivery',
+    component: OrderPage
+  },
+  {
     path: '/order/query',
     name: 'OrderQuery',
     component: OrderPage

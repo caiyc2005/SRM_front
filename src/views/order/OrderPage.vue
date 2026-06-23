@@ -59,12 +59,15 @@ const useApi = ref(false)
 
 const route = useRoute()
 
-// 判断当前模式：pending（待确认）或 query（查询）
+// 判断当前模式
 function isPendingMode() {
   return route.path === '/order/pending'
 }
+function isPendingDeliveryMode() {
+  return route.path === '/order/pending-delivery'
+}
 
-// 筛选字段配置（待确认列表不显示状态筛选）
+// 筛选字段配置（待确认/待生成送货单列表不显示状态筛选）
 const orderStatusOptions = [
   { label: '待确认', value: '0' },
   { label: '已确认', value: '1' },
@@ -78,7 +81,7 @@ const orderFilterFields = computed(() => {
     { key: 'orderCode', label: '订单编号', type: 'input', width: 220 },
     { key: 'supplierID', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'supplierName', valueKey: 'supplierID' }
   ]
-  if (!isPendingMode()) {
+  if (!isPendingMode() && !isPendingDeliveryMode()) {
     fields.push({ key: 'status', label: '订单状态', type: 'select', width: 180, options: orderStatusOptions })
   }
   return fields
@@ -108,7 +111,11 @@ async function loadOrders() {
     const params = new URLSearchParams()
     if (query.orderCode) params.append('orderCode', query.orderCode)
     if (query.supplierID) params.append('supplierID', query.supplierID)
-    if (query.status) params.append('status', query.status)
+    if (isPendingDeliveryMode()) {
+      params.append('status', '1')
+    } else if (query.status) {
+      params.append('status', query.status)
+    }
     params.append('pageIndex', String(query.pageNum))
     params.append('pageSize', String(query.pageSize))
 
@@ -153,6 +160,8 @@ async function loadOrders() {
   let data = filteredData.value
   if (isPendingMode()) {
     data = data.filter(item => item.status === '0')
+  } else if (isPendingDeliveryMode()) {
+    data = data.filter(item => item.status === '1')
   }
   total.value = data.length
   const start = (query.pageNum - 1) * query.pageSize
@@ -457,8 +466,8 @@ watch(() => route.path, () => {
           :total="total"
           :query="query"
           action-type="all"
-          :hide-confirm="!isPendingMode()"
-          :hide-status="isPendingMode()"
+          :hide-confirm="!isPendingMode() && !isPendingDeliveryMode()"
+          :hide-status="isPendingMode() || isPendingDeliveryMode()"
           @confirm="handleConfirm"
           @generate-delivery="handleGenerateDelivery"
         />
