@@ -223,6 +223,34 @@ function handleReceive(row) {
   }).catch(() => {})
 }
 
+// ==================== 扫码弹窗 ====================
+const scanVisible = ref(false)
+const scanInput = ref('')
+const scanLoading = ref(false)
+
+function openScanner() {
+  scanInput.value = ''
+  scanVisible.value = true
+}
+
+function handleScanConfirm() {
+  const code = scanInput.value.trim()
+  if (!code) {
+    ElMessage.warning('请输入或扫描送货单号')
+    return
+  }
+  scanVisible.value = false
+  searchNoteCode.value = code
+  handleSearch()
+}
+
+/** 快捷选择送货单（模拟扫码演示） */
+function quickSelectDelivery(deliveryNo) {
+  scanVisible.value = false
+  searchNoteCode.value = deliveryNo
+  handleSearch()
+}
+
 // ==================== 生命周期 ====================
 onMounted(() => {
   // 初始化送货单数据
@@ -277,10 +305,21 @@ onMounted(() => {
                       </el-button>
                     </template>
                   </el-input>
+                  <el-button
+                    type="primary"
+                    size="large"
+                    circle
+                    class="scan-btn"
+                    @click="openScanner"
+                  >
+                    <el-icon size="22"><Camera /></el-icon>
+                  </el-button>
                 </div>
                 <div class="search-hint">
                   <el-icon><InfoFilled /></el-icon>
-                  扫描送货单条形码，或手动输入送货单号进行查询
+                  扫描送货单条形码，或手动输入送货单号进行查询 — 点击右侧
+                  <el-icon style="margin: 0 2px"><Camera /></el-icon>
+                  可打开扫码窗口
                 </div>
               </div>
 
@@ -513,6 +552,77 @@ onMounted(() => {
         </el-card>
       </div>
     </div>
+
+    <!-- ==================== 扫码窗口 ==================== -->
+    <el-dialog
+      :model-value="scanVisible"
+      title="扫码收料"
+      width="560px"
+      :close-on-click-modal="false"
+      destroy-on-close
+      @update:model-value="scanVisible = $event"
+    >
+      <div class="scan-dialog-body">
+        <!-- 模拟扫码区域 -->
+        <div class="scan-area">
+          <div class="scan-frame">
+            <div class="scan-line"></div>
+            <span class="scan-corner top-left"></span>
+            <span class="scan-corner top-right"></span>
+            <span class="scan-corner bottom-left"></span>
+            <span class="scan-corner bottom-right"></span>
+          </div>
+          <div class="scan-tip">
+            <el-icon class="is-loading" size="20"><Loading /></el-icon>
+            请将条形码/二维码对准扫描框
+          </div>
+        </div>
+
+        <!-- 手动输入 -->
+        <div class="scan-input-row">
+          <el-input
+            v-model="scanInput"
+            placeholder="输入送货单号后按回车"
+            size="large"
+            clearable
+            @keyup.enter="handleScanConfirm"
+          >
+            <template #prefix>
+              <el-icon><Document /></el-icon>
+            </template>
+          </el-input>
+        </div>
+
+        <!-- 快捷选择（演示用） -->
+        <div class="quick-list">
+          <div class="quick-list-title">快捷选择（演示扫码）</div>
+          <div class="quick-items">
+            <el-button
+              v-for="d in allDeliveries.slice(0, 8)"
+              :key="d.deliveryNo"
+              size="small"
+              :type="d.status === '1' ? 'info' : 'primary'"
+              :disabled="d.status === '1'"
+              plain
+              @click="quickSelectDelivery(d.deliveryNo)"
+            >
+              {{ d.deliveryNo }}
+              <el-tag :type="d.status === '1' ? 'success' : 'warning'" size="small" style="margin-left: 6px">
+                {{ d.status === '1' ? '已收' : '未收' }}
+              </el-tag>
+            </el-button>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="scanVisible = false">关闭</el-button>
+        <el-button type="primary" @click="handleScanConfirm" :loading="scanLoading">
+          <el-icon><Search /></el-icon>
+          确认查询
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -588,4 +698,73 @@ onMounted(() => {
 }
 .detail-info span { color: #666; }
 .red-price { color: #f56c6c; font-weight: 500; }
+
+/* 扫码按钮 */
+.scan-btn {
+  flex-shrink: 0;
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border: none;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.4);
+}
+.scan-btn:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.5);
+}
+
+/* 扫码弹窗 */
+.scan-dialog-body {
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+}
+.scan-area {
+  width: 280px; height: 220px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: #1a1a2e; border-radius: 12px;
+}
+.scan-frame {
+  position: relative;
+  width: 200px; height: 140px;
+  display: flex; align-items: center; justify-content: center;
+}
+.scan-line {
+  position: absolute;
+  width: 100%; height: 2px;
+  background: linear-gradient(90deg, transparent, #00d4ff, #00d4ff, transparent);
+  animation: scanMove 2s ease-in-out infinite;
+}
+@keyframes scanMove {
+  0% { top: 0; }
+  50% { top: 100%; }
+  100% { top: 0; }
+}
+.scan-corner {
+  position: absolute; width: 20px; height: 20px; border-color: #00d4ff; border-style: solid;
+}
+.scan-corner.top-left { top: 0; left: 0; border-width: 3px 0 0 3px; }
+.scan-corner.top-right { top: 0; right: 0; border-width: 3px 3px 0 0; }
+.scan-corner.bottom-left { bottom: 0; left: 0; border-width: 0 0 3px 3px; }
+.scan-corner.bottom-right { bottom: 0; right: 0; border-width: 0 3px 3px 0; }
+
+.scan-tip {
+  color: #8899aa; font-size: 13px; margin-top: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+
+.scan-input-row {
+  width: 100%;
+}
+
+/* 快捷选择列表 */
+.quick-list {
+  width: 100%;
+}
+.quick-list-title {
+  font-size: 13px; color: #909399; margin-bottom: 10px;
+}
+.quick-items {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.quick-items .el-button {
+  font-family: monospace;
+}
 </style>
