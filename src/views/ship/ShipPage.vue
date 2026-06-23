@@ -56,31 +56,33 @@ async function loadShipOrders() {
     params.append('pageSize', '999') // 一次性拉取，客户端筛选
 
     const token = localStorage.getItem('token')
-    const res = await fetch(`${API_BASE}/GetOrdersByList?${params}`, {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    const res = await fetch(`/api/Delivery/GetDeliveryNote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ page: 1, pageSize: 999 })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
 
-    if (result.success && result.data) {
-      allOrders.value = (result.data.list || []).map(o => ({
-        orderID: o.orderID,
-        orderCode: o.orderCode,
-        supplierID: o.supplierID,
-        supplierName: o.supplierName,
-        status: String(o.status),
-        materialCount: o.orderDetails?.length || 0,
-        totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
-        createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
-        noteCode: o.noteCode || '',
-        materials: (o.orderDetails || []).map((od, i) => ({
+    if (result.code === 200 && result.data) {
+      allOrders.value = (result.data.items || []).map(item => ({
+        orderID: item.orderID ,//|| item.noteID,
+        orderCode: item.noteCode,
+        supplierID: item.supplierID || '',
+        supplierName: item.supplierName || '',
+        status: String(item.orderStatus ?? (item.status ? 3 : 2)),
+        materialCount: item.details?.length || 0,
+        totalAmount: '0.00',
+        createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
+        noteCode: item.noteCode || '',
+        materials: (item.details || []).map((dd, i) => ({
           index: i + 1,
-          materialCode: od.materialCode,
-          materialName: od.materialName,
-          spec: od.spec || '',
-          qty: od.qty,
-          unitPrice: od.unitPrice,
-          amount: od.amount
+          materialCode: dd.materialCode || '',
+          materialName: dd.materialName || '',
+          spec: '',
+          qty: dd.quantity || 0,
+          unitPrice: 0,
+          amount: 0
         }))
       }))
       useApi.value = true
