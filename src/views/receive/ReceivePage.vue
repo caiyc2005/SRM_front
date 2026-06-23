@@ -71,7 +71,7 @@ async function handleSearch() {
         supplierName: item.supplierName || '',
         supplierCode: '',
         expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
-        createTime: item.createdTime ? item.createdTime.replace('T', ' ') : '',
+        createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
         status: item.status ? '1' : '0',
         materials: (item.details || []).map((dd, i) => ({
           index: i + 1,
@@ -281,7 +281,7 @@ async function loadReceiveRecords() {
           orderNo: '',
           supplierName: r.supplierName || '',
           operator: r.receiveUserName || '',
-          receiveDate: r.receiveDate ? r.receiveDate.replace('T', ' ') : '',
+          receiveDate: r.receiveDate ? r.receiveDate.replace('T', ' ').slice(0, 16) : '',
           items: details,
           totalPlanQty: details.reduce((s, d) => s + d.planQty, 0),
           totalReceivedQty: details.reduce((s, d) => s + d.receivedQty, 0),
@@ -375,7 +375,7 @@ async function loadPendingOrders() {
         status: String(o.status),
         materialCount: o.orderDetails?.length || 0,
         totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
-        createTime: o.createTime ? o.createTime.replace('T', ' ') : '',
+        createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
         deliveryNo: o.deliveryNo || '',
         materials: (o.orderDetails || []).map((od, i) => ({
           index: i + 1,

@@ -56,7 +56,7 @@ async function loadShipOrders() {
         status: String(o.status),
         materialCount: o.orderDetails?.length || 0,
         totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
-        createTime: o.createTime ? o.createTime.replace('T', ' ') : '',
+        createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
         deliveryNo: '',
         materials: (o.orderDetails || []).map((od, i) => ({
           index: i + 1,

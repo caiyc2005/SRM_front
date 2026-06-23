@@ -89,8 +89,8 @@ async function loadDeliveries() {
         status: item.status ? '1' : '0',
         materialCount: item.details?.length || 0,
         expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
-        createTime: item.createdTime ? item.createdTime.replace('T', ' ') : '',
-        receiveTime: item.deliveryDate ? item.deliveryDate.replace('T', ' ') : '',
+        createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
+        receiveTime: item.deliveryDate ? item.deliveryDate.replace('T', ' ').slice(0, 16) : '',
         operator: item.createByName || '',
         materials: (item.details || []).map((dd, i) => ({
           index: i + 1,
