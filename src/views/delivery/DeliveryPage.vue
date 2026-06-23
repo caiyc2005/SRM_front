@@ -115,7 +115,7 @@ async function loadDeliveries() {
           index: i + 1,
           materialCode: dd.materialCode,
           materialName: dd.materialName || '',
-          spec: '',
+          spec: dd.spec,// || dd.specification || '',
           unit: dd.unit || '',
           quantity: dd.quantity,
           receivedQty: dd.receivedQty || 0,
