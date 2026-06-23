@@ -13,6 +13,13 @@ import WarehousePage from '@/views/basic/WarehousePage.vue'
 import CreateOrderPage from '@/views/order/CreateOrderPage.vue'
 import DeliveryPrintPage from '@/views/delivery/DeliveryPrintPage.vue'
 
+/**
+ * 角色-页面访问配置
+ *
+ * 每个路由的 meta.roles 列出允许访问的角色名称。
+ * 不设置 meta.roles 或设为空数组 = 所有角色可访问（如登录页）。
+ * 角色名称以你的后端返回为准，修改下面的数组即可调整。
+ */
 const routes = [
   {
     path: '/',
@@ -30,79 +37,133 @@ const routes = [
   {
     path: '/order/pending',
     name: 'OrderPending',
-    component: OrderPage
+    component: OrderPage,
+    meta: { roles: ['采购员', '管理员', 'admin'], title: '确认采购单' }
   },
   {
     path: '/order/pending-delivery',
     name: 'OrderPendingDelivery',
-    component: OrderPage
+    component: OrderPage,
+    meta: { roles: ['采购员', '管理员', 'admin'], title: '生成送货单' }
   },
   {
     path: '/order/query',
     name: 'OrderQuery',
-    component: OrderPage
+    component: OrderPage,
+    meta: { roles: ['采购员', '仓管员', '管理员', 'admin'], title: '订单一览表' }
   },
   {
     path: '/order/create',
     name: 'CreateOrder',
-    component: CreateOrderPage
+    component: CreateOrderPage,
+    meta: { roles: ['采购员', '管理员', 'admin'], title: '创建采购单' }
   },
   {
     path: '/delivery',
     name: 'Delivery',
-    component: DeliveryPage
+    component: DeliveryPage,
+    meta: { roles: ['仓管员', '供应商', '管理员', 'admin'], title: '送货单查询' }
   },
   {
     path: '/delivery/print',
     name: 'DeliveryPrint',
-    component: DeliveryPrintPage
+    component: DeliveryPrintPage,
+    meta: { roles: ['仓管员', '供应商', '管理员', 'admin'], title: '打印送货单' }
   },
   {
     path: '/ship',
     name: 'Ship',
-    component: ShipPage
+    component: ShipPage,
+    meta: { roles: ['供应商', '管理员', 'admin','supplier'], title: '供应商发货' }
   },
   {
     path: '/supplier',
     name: 'Supplier',
-    component: SupplierPage
+    component: SupplierPage,
+    meta: { roles: ['采购员', '管理员', 'admin'], title: '供应商管理' }
   },
   {
     path: '/receive',
     name: 'Receive',
-    component: ReceivePage
+    component: ReceivePage,
+    meta: { roles: ['仓管员', '管理员', 'admin'], title: '收料入库' }
   },
   // ========== 基础信息 ==========
   {
     path: '/basic/user',
     name: 'UserManagement',
-    component: UserManagement
+    component: UserManagement,
+    meta: { roles: ['管理员', 'admin'], title: '用户管理' }
   },
   {
     path: '/basic/role',
     name: 'RoleManagement',
-    component: RoleManagement
+    component: RoleManagement,
+    meta: { roles: ['管理员', 'admin'], title: '角色管理' }
   },
   {
     path: '/basic/material',
     name: 'MaterialManagement',
-    component: MaterialManagement
+    component: MaterialManagement,
+    meta: { roles: ['采购员', '仓管员', '管理员', 'admin'], title: '物料管理' }
   },
   {
     path: '/basic/inventory',
     name: 'Inventory',
-    component: InventoryPage
+    component: InventoryPage,
+    meta: { roles: ['仓管员', '管理员', 'admin'], title: '库存查询' }
   },
   {
     path: '/basic/warehouse',
     name: 'Warehouse',
-    component: WarehousePage
+    component: WarehousePage,
+    meta: { roles: ['仓管员', '管理员', 'admin'], title: '仓库管理' }
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+/** 检查当前用户是否有权访问指定路由 */
+function hasRouteAccess(route) {
+  // 没有 meta.roles 的路由 = 公开（如登录页、redirect 路由）
+  if (!route.meta?.roles || route.meta.roles.length === 0) return true
+  const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]')
+  return route.meta.roles.some(role => userRoles.includes(role))
+}
+
+/** 找到当前用户有权访问的第一个页面路径（避免守卫死循环） */
+function findFirstAccessibleRoute() {
+  const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]')
+  if (userRoles.length === 0) return null
+  const allRoutes = router.getRoutes()
+  const accessible = allRoutes.find(r =>
+    r.path !== '/' &&
+    r.path !== '/login' &&
+    r.meta?.roles?.length &&
+    r.meta.roles.some(role => userRoles.includes(role))
+  )
+  return accessible?.path || null
+}
+
+// 导航守卫：未登录 → 登录页；无权限 → 跳转到有权访问的页面
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token')
+
+  // 未登录 → 强制到登录页
+  if (!token && to.name !== 'Login') {
+    return next('/login')
+  }
+
+  // 已登录但目标路由无权限 → 静默跳转到有权访问的页面
+  if (token && !hasRouteAccess(to)) {
+    const fallback = findFirstAccessibleRoute()
+    return next(fallback ? { path: fallback, replace: true } : '/login')
+  }
+
+  next()
 })
 
 export default router

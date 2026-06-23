@@ -157,6 +157,17 @@ function handleRowClick(row) {
 
 // ==================== 操作 ====================
 async function handleShip(row) {
+  // 根据当前状态给出不同提示
+  if (row.status === '3') {
+    ElMessage.info('该送货单已发货，无需重复操作')
+    return
+  }
+  if (row.status === '4' || row.status === '5') {
+    ElMessage.warning('该送货单已收货，无法再次发货')
+    return
+  }
+
+  // 待发货（status === '2'）走正常发货流程
   try {
     await ElMessageBox.confirm(
       `确认订单「${row.orderCode}」已发货吗？`,
@@ -258,14 +269,25 @@ async function handleShip(row) {
             </el-table-column>
             <el-table-column label="操作" width="120" align="center">
               <template #default="{ row }">
-                <el-button
-                  type="success"
-                  size="small"
-                  :disabled="row.status !== '2'"
-                  @click="handleShip(row)"
+                <el-tooltip
+                  :content="
+                    row.status === '3' ? '该送货单已发货，无需重复操作' :
+                    ['4','5'].includes(row.status) ? '该送货单已收货，无法再次发货' : ''
+                  "
+                  :disabled="row.status === '2'"
+                  placement="top"
                 >
-                  确认发货
-                </el-button>
+                  <span style="display: inline-block;">
+                    <el-button
+                      type="success"
+                      size="small"
+                      :disabled="row.status !== '2'"
+                      @click="handleShip(row)"
+                    >
+                      确认发货
+                    </el-button>
+                  </span>
+                </el-tooltip>
               </template>
             </el-table-column>
           </el-table>

@@ -31,6 +31,7 @@ function handleLogout() {
   }).then(() => {
     localStorage.removeItem('token')
     localStorage.removeItem('userInfo')
+    localStorage.removeItem('userRoles')
     router.push('/login')
   }).catch(() => {})
 }

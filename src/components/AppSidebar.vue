@@ -5,6 +5,38 @@ import { ref, computed, watch, onMounted } from 'vue'
 const router = useRouter()
 const route = useRoute()
 
+/** 当前用户的角色列表 */
+const userRoles = ref([])
+
+onMounted(() => {
+  const stored = localStorage.getItem('userRoles')
+  if (stored) {
+    try { userRoles.value = JSON.parse(stored) } catch { userRoles.value = [] }
+  }
+})
+
+/** 检查当前用户是否有权访问某个路径 */
+function hasPathAccess(path) {
+  if (!path || userRoles.value.length === 0) return true
+  const matched = router.getRoutes().find(r => r.path === path)
+  if (!matched || !matched.meta?.roles || matched.meta.roles.length === 0) return true
+  return matched.meta.roles.some(role => userRoles.value.includes(role))
+}
+
+/** 根据角色过滤后的可见菜单 */
+const visibleMenuItems = computed(() => {
+  return menuItems
+    .map(group => {
+      if (!group.children) {
+        return hasPathAccess(group.path) ? group : null
+      }
+      const visibleChildren = group.children.filter(c => hasPathAccess(c.path))
+      if (visibleChildren.length === 0) return null
+      return { ...group, children: visibleChildren }
+    })
+    .filter(Boolean)
+})
+
 // 待确认订单计数
 const pendingCount = ref(0)
 
@@ -135,7 +167,7 @@ watch(() => route.path, () => {
 <template>
   <div class="sidebar">
     <div class="logo">SRM管理系统</div>
-    <template v-for="item in menuItems" :key="item.key">
+    <template v-for="item in visibleMenuItems" :key="item.key">
       <!-- 有子菜单的父项 -->
       <template v-if="item.children">
         <div

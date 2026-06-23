@@ -44,7 +44,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { MOCK_USERS } from '@/mock'
+import { MOCK_USERS } from '@/mock/userData'
 
 const router = useRouter()
 
@@ -105,9 +105,12 @@ const handleLogin = async () => {
     const result = await response.json()
 
     if (result.success) {
-      // 登录成功 — 保存 token 和用户信息
+      // 登录成功 — 保存 token、用户信息、角色
       localStorage.setItem('token', result.token)
       localStorage.setItem('userInfo', JSON.stringify(result.user))
+      if (result.user?.roles) {
+        localStorage.setItem('userRoles', JSON.stringify(result.user.roles))
+      }
       router.push('/order')
     } else {
       alert(result.message || '账号或密码错误')
@@ -124,6 +127,9 @@ const handleLogin = async () => {
     if (user) {
       localStorage.setItem('token', 'mock-token')
       localStorage.setItem('userInfo', JSON.stringify(user))
+      if (user.roles) {
+        localStorage.setItem('userRoles', JSON.stringify(user.roles))
+      }
       router.push('/order')
     } else {
       alert('账号或密码错误')
