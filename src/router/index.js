@@ -10,6 +10,7 @@ import RoleManagement from '@/views/basic/RoleManagement.vue'
 import MaterialManagement from '@/views/basic/MaterialManagement.vue'
 import InventoryPage from '@/views/basic/InventoryPage.vue'
 import WarehousePage from '@/views/basic/WarehousePage.vue'
+import CreateOrderPage from '@/views/order/CreateOrderPage.vue'
 
 const routes = [
   {
@@ -39,6 +40,11 @@ const routes = [
     path: '/order/query',
     name: 'OrderQuery',
     component: OrderPage
+  },
+  {
+    path: '/order/create',
+    name: 'CreateOrder',
+    component: CreateOrderPage
   },
   {
     path: '/delivery',

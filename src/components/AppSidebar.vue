@@ -70,19 +70,21 @@ const menuItems = [
     label: '📋 采购订单管理',
     children: [
       { key: 'order-query', label: '订单一览表', path: '/order/query' },
-      { key: 'order-pending', label: '待确认列表', path: '/order/pending' },
+      { key: 'order-create', label: '创建采购单', path: '/order/create' },
+      { key: 'order-pending', label: '确认采购单', path: '/order/pending' },
       { key: 'order-pending-delivery', label: '生成送货单', path: '/order/pending-delivery' },
     ]
   },
   {
     key: 'warehouse',
-    label: '🏭 仓储管理',
+    label: '🏭 货物管理 🚚 ',
     children: [
       { key: 'delivery', label: '送货单查询', path: '/delivery' },
+      { key: 'ship', label: '供应商发货', path: '/ship' },
       { key: 'receive', label: '收料入库', path: '/receive' }
     ]
-  },
-  { key: 'ship', label: '🚚 供应商发货', path: '/ship' }
+  }
+  
 ]
 
 // 当前路由对应的父菜单（只展开当前活跃的菜单组）
