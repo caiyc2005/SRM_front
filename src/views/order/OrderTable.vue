@@ -8,7 +8,8 @@ defineProps({
   total: { type: Number, required: true },
   query: { type: Object, required: true },
   actionType: { type: String, default: 'all' },
-  hideConfirm: { type: Boolean, default: false }
+  hideConfirm: { type: Boolean, default: false },
+  hideStatus: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['pageChange', 'confirm', 'generateDelivery'])
@@ -44,7 +45,7 @@ function handleRowClick(row) {
             <div class="detail-info">
               <div><span>订单编号：</span><b>{{ props.row.orderCode }}</b></div>
               <div><span>供应商：</span><b>{{ props.row.supplierName }}</b></div>
-              <div><span>订单状态：</span><b>{{ getStatusText(props.row.status) }}</b></div>
+              <div v-if="!hideStatus"><span>订单状态：</span><b>{{ getStatusText(props.row.status) }}</b></div>
               <div><span>总金额：</span><b class="red-price">¥{{ props.row.totalAmount }}</b></div>
               <div><span>创建时间：</span><b>{{ props.row.createTime }}</b></div>
               <div v-if="props.row.deliveryNo">
@@ -72,7 +73,7 @@ function handleRowClick(row) {
       <el-table-column prop="totalAmount" label="总金额(元)" width="130" align="center" class-name="red-price" resizable="false" />
       <el-table-column prop="createTime" label="创建时间" width="160" align="center" resizable="false" />
       <!-- 订单状态 -->
-      <el-table-column label="订单状态" width="100" align="center" resizable="false">
+      <el-table-column v-if="!hideStatus" label="订单状态" width="100" align="center" resizable="false">
         <template #default="scope">
           <el-tag :type="getStatusTag(scope.row.status)" size="small">
             {{ getStatusText(scope.row.status) }}

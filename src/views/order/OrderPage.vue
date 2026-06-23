@@ -458,6 +458,7 @@ watch(() => route.path, () => {
           :query="query"
           action-type="all"
           :hide-confirm="!isPendingMode()"
+          :hide-status="isPendingMode()"
           @confirm="handleConfirm"
           @generate-delivery="handleGenerateDelivery"
         />
