@@ -119,7 +119,6 @@ function handleReceive(row) {
                     <div><span>订单状态：</span><b>{{ getStatusText(row.status) }}</b></div>
                     <div><span>总金额：</span><b class="red-price">¥{{ row.totalAmount }}</b></div>
                     <div><span>送货单号：</span><b style="color: #1890ff">{{ row.deliveryNo || '—' }}</b></div>
-                    <div><span>交货日期：</span><b>{{ row.deliveryDate }}</b></div>
                     <div><span>创建时间：</span><b>{{ row.createTime }}</b></div>
                   </div>
                   <el-table :data="row.materials" size="small" border style="width: 100%">

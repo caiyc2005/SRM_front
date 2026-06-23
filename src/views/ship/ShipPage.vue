@@ -56,7 +56,6 @@ async function loadShipOrders() {
         status: String(o.status),
         materialCount: o.orderDetails?.length || 0,
         totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
-        deliveryDate: '',
         createTime: o.createTime ? o.createTime.replace('T', ' ') : '',
         deliveryNo: '',
         materials: (o.orderDetails || []).map((od, i) => ({
@@ -129,19 +128,40 @@ function handleReset() {
 }
 
 // ==================== 操作 ====================
-function handleShip(row) {
-  ElMessageBox.confirm(
-    `确认订单「${row.orderCode}」已发货吗？`,
-    '发货确认',
-    { type: 'warning', confirmButtonText: '确认发货' }
-  ).then(() => {
-    const target = allOrders.value.find(o => o.orderID === row.orderID)
-    if (target) {
-      target.status = '3'
-      allOrders.value = allOrders.value.slice() // 触发视图更新
-      ElMessage.success(`订单 ${row.orderCode} 已更新为「已发货」`)
+async function handleShip(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确认订单「${row.orderCode}」已发货吗？`,
+      '发货确认',
+      { type: 'warning', confirmButtonText: '确认发货' }
+    )
+  } catch { return }
+
+  // ========== 优先调后端 API ==========
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_BASE}/DeliveryConfirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ id: row.orderID })
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.success) {
+      ElMessage.success(`订单 ${row.orderCode} 已确认发货`)
+      return
     }
-  }).catch(() => {})
+    // API 返回失败也降级
+  } catch { /* 后端无此接口，降级到本地 */ }
+
+  // ========== 降级：本地模拟 ==========
+  const target = allOrders.value.find(o => o.orderID === row.orderID)
+  if (target) {
+    target.status = '3'
+    allOrders.value = allOrders.value.slice()
+    ElMessage.success(`订单 ${row.orderCode} 已更新为「已发货」（本地）`)
+  }
 }
 </script>
 
@@ -174,7 +194,6 @@ function handleShip(row) {
                     <div><span>供应商：</span><b>{{ row.supplierName }}</b></div>
                     <div><span>订单状态：</span><b>{{ getStatusText(row.status) }}</b></div>
                     <div><span>总金额：</span><b class="red-price">¥{{ row.totalAmount }}</b></div>
-                    <div><span>交货日期：</span><b>{{ row.deliveryDate }}</b></div>
                     <div><span>创建时间：</span><b>{{ row.createTime }}</b></div>
                     <div v-if="row.deliveryNo">
                       <span>送货单号：</span><b style="color: #1890ff">{{ row.deliveryNo }}</b>

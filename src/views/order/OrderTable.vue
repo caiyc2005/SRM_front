@@ -46,7 +46,6 @@ function handleRowClick(row) {
               <div><span>供应商：</span><b>{{ props.row.supplierName }}</b></div>
               <div><span>订单状态：</span><b>{{ getStatusText(props.row.status) }}</b></div>
               <div><span>总金额：</span><b class="red-price">¥{{ props.row.totalAmount }}</b></div>
-              <div><span>交货日期：</span><b>{{ props.row.deliveryDate }}</b></div>
               <div><span>创建时间：</span><b>{{ props.row.createTime }}</b></div>
               <div v-if="props.row.deliveryNo">
                 <span>送货单号：</span><b style="color: #1890ff">{{ props.row.deliveryNo }}</b>
@@ -71,7 +70,6 @@ function handleRowClick(row) {
 
       <el-table-column prop="materialCount" label="物料种类" width="90" align="center" resizable="false" />
       <el-table-column prop="totalAmount" label="总金额(元)" width="130" align="center" class-name="red-price" resizable="false" />
-      <el-table-column prop="deliveryDate" label="预计交货日期" width="120" align="center" resizable="false" />
       <el-table-column prop="createTime" label="创建时间" width="160" align="center" resizable="false" />
       <!-- 订单状态 -->
       <el-table-column label="订单状态" width="100" align="center" resizable="false">

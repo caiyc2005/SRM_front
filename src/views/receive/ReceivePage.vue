@@ -375,7 +375,6 @@ async function loadPendingOrders() {
         status: String(o.status),
         materialCount: o.orderDetails?.length || 0,
         totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
-        deliveryDate: '',
         createTime: o.createTime ? o.createTime.replace('T', ' ') : '',
         deliveryNo: o.deliveryNo || '',
         materials: (o.orderDetails || []).map((od, i) => ({
@@ -806,7 +805,6 @@ onMounted(() => {
                         <div><span>订单状态：</span><b>{{ getStatusText(row.status) }}</b></div>
                         <div><span>总金额：</span><b class="red-price">¥{{ row.totalAmount }}</b></div>
                         <div><span>送货单号：</span><b style="color: #1890ff">{{ row.deliveryNo || '—' }}</b></div>
-                        <div><span>交货日期：</span><b>{{ row.deliveryDate }}</b></div>
                         <div><span>创建时间：</span><b>{{ row.createTime }}</b></div>
                       </div>
                       <el-table :data="row.materials" size="small" border style="width: 100%">

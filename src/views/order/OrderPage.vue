@@ -73,7 +73,6 @@ const createDialogVisible = ref(false)
 const createForm = reactive({
   supplierID: '',
   materials: [],
-  deliveryDate: '',
   remark: ''
 })
 
@@ -173,7 +172,6 @@ function handleExport() {
     '订单状态': getStatusText(item.status),
     '物料种类': item.materialCount,
     '订单总金额(元)': item.totalAmount,
-    '预计交货日期': item.deliveryDate,
     '创建时间': item.createTime
   }))
 
@@ -209,7 +207,6 @@ async function loadMaterials() {
 function openCreateDialog() {
   createForm.supplierID = ''
   createForm.materials = [{ materialID: '', qty: 1, unitPrice: 0 }]
-  createForm.deliveryDate = ''
   createForm.remark = ''
   createDialogVisible.value = true
 }
@@ -304,7 +301,6 @@ async function submitCreateOrder() {
     status: '0',
     materialCount: materials.length,
     totalAmount: totalAmount.toFixed(2),
-    deliveryDate: createForm.deliveryDate || '2024-07-30',
     createTime: formatNow(),
     materials,
     memo: createForm.remark || '',
