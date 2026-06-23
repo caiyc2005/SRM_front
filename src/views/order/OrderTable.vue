@@ -48,8 +48,8 @@ function handleRowClick(row) {
               <div v-if="!hideStatus"><span>订单状态：</span><b>{{ getStatusText(props.row.status) }}</b></div>
               <div><span>总金额：</span><b class="red-price">¥{{ props.row.totalAmount }}</b></div>
               <div><span>创建时间：</span><b>{{ props.row.createTime }}</b></div>
-              <div v-if="props.row.deliveryNo">
-                <span>送货单号：</span><b style="color: #1890ff">{{ props.row.deliveryNo }}</b>
+              <div v-if="props.row.noteCode">
+                <span>送货单号：</span><b style="color: #1890ff">{{ props.row.noteCode }}</b>
               </div>
             </div>
             <!-- 物料明细 -->

@@ -35,7 +35,7 @@ async function loadSuppliers() {
 }
 
 const query = reactive({
-  deliveryNo: '',
+  noteCode: '',
   // orderNo: '',
   orderCode: '',
   supplierId: '',
@@ -55,7 +55,7 @@ const deliveryStatusOptions = [
 ]
 // 送货单筛选显示字段
 const deliveryFilterFields = computed(() => [
-  { key: 'deliveryNo', label: '送货单号', type: 'input', width: 220 },
+  { key: 'noteCode', label: '送货单号', type: 'input', width: 220 },
   { key: 'orderCode', label: '对应订单号', type: 'input', width: 220 },
   { key: 'supplierId', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'supplierName', valueKey: 'supplierID' },
   { key: 'status', label: '收货状态', type: 'select', width: 180, options: deliveryStatusOptions }
@@ -68,7 +68,7 @@ const currentDelivery = ref({})
 // ============ 计算属性 ============
 const filteredData = computed(() => {
   let data = [...mockData.value]
-  if (query.deliveryNo) data = data.filter(item => item.deliveryNo.includes(query.deliveryNo))
+  if (query.noteCode) data = data.filter(item => item.noteCode.includes(query.noteCode))
   if (query.orderCode) data = data.filter(item => (item.orderCode || '').includes(query.orderCode))
   if (query.supplierId) data = data.filter(item => item.supplierId === query.supplierId)
   if (query.status !== '' && query.status != null) data = data.filter(item => item.status === query.status)
@@ -84,7 +84,7 @@ async function loadDeliveries() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
       body: JSON.stringify({
-        noteCode: query.deliveryNo || undefined,
+        noteCode: query.noteCode || undefined,
         orderCode: query.orderCode || undefined,//把orderCode字段传给后端
         supplierId: query.supplierId || undefined,
         status: query.status !== '' && query.status != null ? (query.status === '1') : undefined,
@@ -100,7 +100,7 @@ async function loadDeliveries() {
       total.value = d.total
       tableData.value = (d.items || []).map(item => ({
         id: item.noteID,
-        deliveryNo: item.noteCode,
+        noteCode: item.noteCode,
         orderCode: item.orderCode || '',
         supplierId: item.supplierID || '',
         supplierCode: '',
@@ -142,7 +142,7 @@ function handleQuery() {
 }
 
 function handleReset() {
-  query.deliveryNo = ''
+  query.noteCode = ''
   query.orderCode = ''
   query.supplierId = ''
   query.status = ''
@@ -152,7 +152,7 @@ function handleReset() {
 
 async function handleDelete(row) {
   ElMessageBox.confirm(
-    `确认要删除送货单 ${row.deliveryNo} 吗？删除后不可恢复。`,
+    `确认要删除送货单 ${row.noteCode} 吗？删除后不可恢复。`,
     '删除确认',
     { type: 'warning' }
   ).then(async () => {

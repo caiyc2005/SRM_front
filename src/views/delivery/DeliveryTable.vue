@@ -16,11 +16,11 @@ function getStatusText(status) {
 }
 
 /** 下载条形码为 PNG 图片 */
-function downloadBarcode(deliveryNo) {
-  const canvas = document.querySelector(`#barcode-canvas-${deliveryNo}`)
+function downloadBarcode(noteCode) {
+  const canvas = document.querySelector(`#barcode-canvas-${noteCode}`)
   if (!canvas) return
   const link = document.createElement('a')
-  link.download = `条形码_${deliveryNo}.png`
+  link.download = `条形码_${noteCode}.png`
   link.href = canvas.toDataURL('image/png')
   link.click()
 }
@@ -40,7 +40,7 @@ function downloadBarcode(deliveryNo) {
           <div class="detail-content">
             <div class="detail-title">送货单基础信息</div>
             <div class="detail-info">
-              <div><span>送货单号：</span><b>{{ props.row.deliveryNo }}</b></div>
+              <div><span>送货单号：</span><b>{{ props.row.noteCode }}</b></div>
               <div><span>对应订单号：</span><b>{{ props.row.orderCode }}</b></div>
               <div><span>供应商：</span><b>{{ props.row.supplierName }}</b></div>
               <div><span>收货状态：</span><b>{{ getStatusText(props.row.status) }}</b></div>
@@ -64,11 +64,11 @@ function downloadBarcode(deliveryNo) {
             <!-- <div class="detail-title" style="margin-top: 15px;">送货单条码</div>
             <div class="barcode-row">
               <div class="barcode-img">
-                <BarcodeDisplay :value="props.row.deliveryNo" :canvas-id="`barcode-canvas-${props.row.deliveryNo}`"
+                <BarcodeDisplay :value="props.row.noteCode" :canvas-id="`barcode-canvas-${props.row.noteCode}`"
                   :width="200" :height="60" />
               </div>
               <div class="barcode-actions">
-                <el-button type="primary" size="small" @click="downloadBarcode(props.row.deliveryNo)">
+                <el-button type="primary" size="small" @click="downloadBarcode(props.row.noteCode)">
                   <el-icon>
                     <Download />
                   </el-icon>
@@ -81,7 +81,7 @@ function downloadBarcode(deliveryNo) {
         </template>
       </el-table-column>
 
-      <el-table-column prop="deliveryNo" label="送货单号" width="180" align="center" resizable="false" />
+      <el-table-column prop="noteCode" label="送货单号" width="180" align="center" resizable="false" />
       <el-table-column prop="orderCode" label="对应订单号" width="180" align="center" resizable="false" />
       <el-table-column prop="supplierName" label="供应商名称" min-width="200" align="center" resizable="false" />
       <el-table-column label="收货状态" width="100" align="center" resizable="false">
