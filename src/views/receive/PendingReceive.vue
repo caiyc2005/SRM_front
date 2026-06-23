@@ -127,6 +127,7 @@ function handleReceive(row) {
                     <el-table-column prop="materialName" label="物料名称" width="180" align="center" />
                     <el-table-column prop="spec" label="规格" width="120" align="center" />
                     <el-table-column prop="qty" label="采购数量" align="center" />
+                    <el-table-column prop="unit" label="单位" width="70" align="center" />
                     <el-table-column prop="unitPrice" label="单价" align="center" />
                     <el-table-column prop="amount" label="金额" align="center" />
                   </el-table>
