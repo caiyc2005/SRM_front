@@ -159,7 +159,7 @@ async function handleShip(row) {
     const res = await fetch(`${API_BASE}/DeliveryConfirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ id: row.orderID })
+      body: JSON.stringify({ orderID: row.orderID, supplierID: row.supplierID || '', supplierName: row.supplierName || '' })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}

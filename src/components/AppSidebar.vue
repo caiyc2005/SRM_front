@@ -24,6 +24,8 @@ async function fetchPendingCount() {
 
 onMounted(() => {
   fetchPendingCount()
+  // 每 15 秒刷新一次未确认数量
+  setInterval(fetchPendingCount, 15000)
 })
 
 const menuItems = [
@@ -40,7 +42,7 @@ const menuItems = [
     key: 'order',
     label: '📋 采购订单管理',
     children: [
-      { key: 'order-query', label: '采购订单一览表', path: '/order/query' },
+      { key: 'order-query', label: '订单一览表', path: '/order/query' },
       { key: 'order-pending', label: '待确认列表', path: '/order/pending' },
       
     ]

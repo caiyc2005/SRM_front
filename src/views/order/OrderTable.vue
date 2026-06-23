@@ -84,6 +84,7 @@ function handleRowClick(row) {
       <el-table-column v-if="actionType !== 'none'" label="操作" width="140" align="center" resizable="false">
         <template #default="scope">
           <template v-if="scope.row.status === '0'">
+            <!-- 状态为0：表示未确认的订单 -->
             <el-button v-if="!hideConfirm" type="primary" link size="small"
               @click.stop="emit('confirm', scope.row)">
               确认订单

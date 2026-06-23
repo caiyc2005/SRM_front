@@ -345,7 +345,8 @@ async function handleConfirm(row) {
     const res = await fetch(`${API_BASE}/ConfirmOrder`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ id: row.orderID })
+      // body: JSON.stringify({ id: row.orderID }) //与后端需要的字段不匹配
+      body: JSON.stringify({ orderID: row.orderID })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
