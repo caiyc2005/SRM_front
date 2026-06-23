@@ -80,7 +80,7 @@ async function loadShipOrders() {
           index: i + 1,
           materialCode: dd.materialCode || '',
           materialName: dd.materialName || '',
-          spec: '',
+          spec: dd.spec || '',
           unit: dd.unit || '',
           qty: dd.quantity || 0,
           unitPrice: 0,

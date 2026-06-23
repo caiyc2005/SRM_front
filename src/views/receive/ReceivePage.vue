@@ -77,7 +77,7 @@ async function handleSearch() {
           index: i + 1,
           materialCode: dd.materialCode,
           materialName: dd.materialName || '',
-          spec: '',
+          spec: dd.spec || '',
           unit: dd.unit || '',
           quantity: dd.quantity,
           receivedQty: 0,
@@ -276,7 +276,7 @@ async function loadReceiveRecords() {
         const details = (r.details || []).map(d => ({
           materialCode: d.materialCode,
           materialName: d.materialName || '',
-          spec: '',
+          spec: d.spec || '',
           unit: d.unit || '',
           planQty: d.planQty,
           receivedQty: d.receivedQty,
