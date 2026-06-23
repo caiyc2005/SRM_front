@@ -255,7 +255,7 @@ function handleHistoryPageChange() {}
 async function loadReceiveRecords() {
   try {
     const token = localStorage.getItem('token')
-    const res = await fetch(`${API_RECEIVE}/list`, {
+    const res = await fetch(`${API_RECEIVE}/GetReceivesList`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
       body: JSON.stringify({ page: historyQuery.pageNum, pageSize: historyQuery.pageSize })
