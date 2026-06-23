@@ -8,6 +8,9 @@ import Logout from '@/components/Logout.vue'
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
 import { DEFAULT_SUPPLIERS, initMockOrders } from '@/mock'
 
+const API_BASE = '/api/Orders'
+const useApi = ref(false)
+
 const shipStatusOptions = [
   { label: '全部', value: '' },
   { label: '未发货', value: 'pending' },
@@ -30,8 +33,54 @@ const query = reactive({
   pageSize: 10
 })
 
-onMounted(() => {
+async function loadShipOrders() {
+  // ========== 优先调后端 API ==========
+  try {
+    const params = new URLSearchParams()
+    params.append('pageIndex', '1')
+    params.append('pageSize', '999') // 一次性拉取，客户端筛选
+
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_BASE}/GetOrdersByList?${params}`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.success && result.data) {
+      allOrders.value = (result.data.list || []).map(o => ({
+        orderID: o.orderID,
+        orderCode: o.orderCode,
+        supplierID: o.supplierID,
+        supplierName: o.supplierName,
+        status: String(o.status),
+        materialCount: o.orderDetails?.length || 0,
+        totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
+        deliveryDate: '',
+        createTime: o.createTime ? o.createTime.replace('T', ' ') : '',
+        deliveryNo: '',
+        materials: (o.orderDetails || []).map((od, i) => ({
+          index: i + 1,
+          materialCode: od.materialCode,
+          materialName: od.materialName,
+          spec: od.spec || '',
+          qty: od.qty,
+          unitPrice: od.unitPrice,
+          amount: od.amount
+        }))
+      }))
+      useApi.value = true
+      return
+    }
+  } catch { /* 后端不可用，降级到 mock */ }
+
+  // ========== 降级：使用 mock 数据 ==========
+  useApi.value = false
   allOrders.value = initMockOrders(supplierList.value)
+}
+
+onMounted(() => {
+  loadShipOrders()
 })
 
 // 只显示待发货(2)、已发货(3)、已收货(4)、已完成(5)，按状态排序（待发货在最上面）

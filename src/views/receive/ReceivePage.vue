@@ -17,6 +17,12 @@ import { initMockDeliveries } from '@/mock/deliveryData.js'
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 
+// ==================== API ====================
+const API_DELIVERY = '/api/Delivery'
+const API_RECEIVE = '/api/Receive'
+const API_ORDERS = '/api/Orders'
+const useApi = ref(false)
+
 // ==================== Tab 控制 ====================
 const activeTab = ref('receive')
 
@@ -31,7 +37,7 @@ const notFound = ref(false)           // 是否查无此单
 const receiveFormItems = ref([])      // 可编辑的物料行 [{...deliveryItem, receivedQty: 0}]
 
 /** 按送货单号查找 */
-function handleSearch() {
+async function handleSearch() {
   const kw = searchNoteCode.value.trim()
   if (!kw) {
     foundDelivery.value = null
@@ -39,6 +45,55 @@ function handleSearch() {
     return
   }
 
+  // ========== 优先调后端 API ==========
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_DELIVERY}/GetDeliveryNote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ noteCode: kw, page: 1, pageSize: 1 })
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.code === 200 && result.data?.items?.length) {
+      const item = result.data.items[0]
+      if (item.status) {
+        ElMessage.warning('该送货单已收货，不可重复收料')
+        foundDelivery.value = null
+        notFound.value = false
+        return
+      }
+      notFound.value = false
+      foundDelivery.value = {
+        deliveryNo: item.noteCode,
+        orderNo: item.orderID || '',
+        supplierName: item.supplierName || '',
+        supplierCode: '',
+        expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
+        createTime: item.createdTime ? item.createdTime.replace('T', ' ') : '',
+        status: item.status ? '1' : '0',
+        materials: (item.details || []).map((dd, i) => ({
+          index: i + 1,
+          materialCode: dd.materialCode,
+          materialName: dd.materialName || '',
+          spec: '',
+          unit: dd.unit || '',
+          quantity: dd.quantity,
+          receivedQty: 0,
+          remark: ''
+        }))
+      }
+      receiveFormItems.value = foundDelivery.value.materials.map(m => ({
+        ...m,
+        receivedQty: m.quantity
+      }))
+      useApi.value = true
+      return
+    }
+  } catch { /* 降级到 mock */ }
+
+  // ========== 降级：从本地 mock 数据查找 ==========
   const result = allDeliveries.value.find(
     d => d.deliveryNo.toLowerCase() === kw.toLowerCase()
   )
@@ -68,7 +123,7 @@ function handleSearch() {
 }
 
 /** 确认收货 */
-function handleConfirmReceive() {
+async function handleConfirmReceive() {
   if (!foundDelivery.value) return
 
   const delivery = foundDelivery.value
@@ -93,49 +148,87 @@ function handleConfirmReceive() {
   const totalPlan = items.reduce((s, i) => s + i.quantity, 0)
   const totalReceived = items.reduce((s, i) => s + Number(i.receivedQty), 0)
 
-  ElMessageBox.confirm(
-    `确认收货？\n计划总数：${totalPlan}，实收总数：${totalReceived}` +
-    (totalPlan !== totalReceived ? `\n差异：${totalPlan - totalReceived}` : ''),
-    '确认收料',
-    { type: 'warning', confirmButtonText: '确认收货' }
-  ).then(() => {
-    // 更新送货单状态
-    delivery.status = '1'
-    delivery.receiveTime = new Date().toLocaleString('zh-CN')
-    delivery.operator = '仓管员'
+  try {
+    await ElMessageBox.confirm(
+      `确认收货？\n计划总数：${totalPlan}，实收总数：${totalReceived}` +
+      (totalPlan !== totalReceived ? `\n差异：${totalPlan - totalReceived}` : ''),
+      '确认收料',
+      { type: 'warning', confirmButtonText: '确认收货' }
+    )
+  } catch { return }
 
-    // 记录收料单
-    const record = {
-      recordId: 'REC' + String(receiveRecords.value.length + 1).padStart(3, '0'),
-      recordCode: 'REC-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' +
-        String(receiveRecords.value.length + 1).padStart(3, '0'),
-      noteCode: delivery.deliveryNo,
-      orderNo: delivery.orderNo,
-      supplierName: delivery.supplierName || '—',
-      operator: '仓管员',
-      receiveDate: new Date().toLocaleString('zh-CN'),
-      items: items.map(i => ({
-        materialCode: i.materialCode,
-        materialName: i.materialName,
-        spec: i.spec,
-        unit: i.unit,
-        planQty: i.quantity,
-        receivedQty: Number(i.receivedQty),
-        diffQty: i.quantity - Number(i.receivedQty)
-      })),
-      totalPlanQty: totalPlan,
-      totalReceivedQty: totalReceived,
-      totalDiffQty: totalPlan - totalReceived
+  // ========== 优先调后端 API ==========
+  if (useApi.value || true /* 总是尝试调 API */) {
+    try {
+      let userInfo = { userID: '', userName: '' }
+      try { userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}') } catch {}
+      const token = localStorage.getItem('token')
+
+      const res = await fetch(`${API_RECEIVE}/CreateReceive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          noteCode: delivery.deliveryNo,
+          receiveUserID: userInfo.userID || '',
+          receiveUserName: userInfo.userName || '仓管员',
+          details: items.map(i => ({
+            materialCode: i.materialCode,
+            receivedQty: Number(i.receivedQty)
+          }))
+        })
+      })
+      const text = await res.text()
+      const result = text ? JSON.parse(text) : {}
+
+      if (result.code === 200) {
+        ElMessage.success('收货确认成功！库存已自动更新。')
+        // 重置
+        foundDelivery.value = null
+        receiveFormItems.value = []
+        searchNoteCode.value = ''
+        return
+      }
+      ElMessage.error(result.message || '后端收货失败，尝试本地记录')
+    } catch {
+      ElMessage.warning('后端不可用，已保存到本地记录')
     }
-    receiveRecords.value.unshift(record)
+  }
 
-    // 重置
-    foundDelivery.value = null
-    receiveFormItems.value = []
-    searchNoteCode.value = ''
+  // ========== 降级：本地记录 ==========
+  delivery.status = '1'
+  delivery.receiveTime = new Date().toLocaleString('zh-CN')
+  delivery.operator = '仓管员'
 
-    ElMessage.success('收货确认成功！库存已自动更新。')
-  }).catch(() => {})
+  const record = {
+    recordId: 'REC' + String(receiveRecords.value.length + 1).padStart(3, '0'),
+    recordCode: 'REC-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' +
+      String(receiveRecords.value.length + 1).padStart(3, '0'),
+    noteCode: delivery.deliveryNo,
+    orderNo: delivery.orderNo,
+    supplierName: delivery.supplierName || '—',
+    operator: '仓管员',
+    receiveDate: new Date().toLocaleString('zh-CN'),
+    items: items.map(i => ({
+      materialCode: i.materialCode,
+      materialName: i.materialName,
+      spec: i.spec,
+      unit: i.unit,
+      planQty: i.quantity,
+      receivedQty: Number(i.receivedQty),
+      diffQty: i.quantity - Number(i.receivedQty)
+    })),
+    totalPlanQty: totalPlan,
+    totalReceivedQty: totalReceived,
+    totalDiffQty: totalPlan - totalReceived
+  }
+  receiveRecords.value.unshift(record)
+
+  // 重置
+  foundDelivery.value = null
+  receiveFormItems.value = []
+  searchNoteCode.value = ''
+
+  ElMessage.success('收货确认成功！库存已自动更新。')
 }
 
 /** 清空搜索 */
@@ -157,8 +250,47 @@ const historyTableData = computed(() => {
   return receiveRecords.value.slice(start, start + historyQuery.pageSize)
 })
 
-function handleHistoryPageChange() {
-  // AppPagination 自动更新
+function handleHistoryPageChange() {}
+
+async function loadReceiveRecords() {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_RECEIVE}/list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ page: historyQuery.pageNum, pageSize: historyQuery.pageSize })
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.code === 200 && result.data) {
+      receiveRecords.value = (result.data.items || []).map(r => {
+        const details = (r.details || []).map(d => ({
+          materialCode: d.materialCode,
+          materialName: d.materialName || '',
+          spec: '',
+          unit: d.unit || '',
+          planQty: d.planQty,
+          receivedQty: d.receivedQty,
+          diffQty: d.diffQty
+        }))
+        return {
+          recordId: r.receiveID,
+          recordCode: r.receiveCode || '',
+          noteCode: r.noteCode || '',
+          orderNo: '',
+          supplierName: r.supplierName || '',
+          operator: r.receiveUserName || '',
+          receiveDate: r.receiveDate ? r.receiveDate.replace('T', ' ') : '',
+          items: details,
+          totalPlanQty: details.reduce((s, d) => s + d.planQty, 0),
+          totalReceivedQty: details.reduce((s, d) => s + d.receivedQty, 0),
+          totalDiffQty: details.reduce((s, d) => s + d.diffQty, 0)
+        }
+      })
+      return
+    }
+  } catch { /* 降级，保留本地记录 */ }
 }
 
 // ==================== Tab3：待收料 ====================
@@ -222,6 +354,44 @@ function handleReceive(row) {
       ElMessage.success(`订单 ${row.orderCode} 已更新为「已收货」`)
     }
   }).catch(() => {})
+}
+
+/** 加载待收料订单（Tab3） */
+async function loadPendingOrders() {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_ORDERS}/GetOrdersByList?status=3&pageIndex=1&pageSize=999`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.success && result.data?.list?.length) {
+      allOrders.value = result.data.list.map(o => ({
+        orderID: o.orderID,
+        orderCode: o.orderCode,
+        supplierID: o.supplierID,
+        supplierName: o.supplierName,
+        status: String(o.status),
+        materialCount: o.orderDetails?.length || 0,
+        totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
+        deliveryDate: '',
+        createTime: o.createTime ? o.createTime.replace('T', ' ') : '',
+        deliveryNo: o.deliveryNo || '',
+        materials: (o.orderDetails || []).map((od, i) => ({
+          index: i + 1,
+          materialCode: od.materialCode,
+          materialName: od.materialName,
+          spec: od.spec || '',
+          qty: od.qty,
+          unitPrice: od.unitPrice,
+          amount: od.amount
+        }))
+      }))
+      return
+    }
+  } catch { /* 降级到 mock */ }
+  allOrders.value = initMockOrders(supplierList.value)
 }
 
 // ==================== 扫码弹窗（真实摄像头） ====================
@@ -377,7 +547,11 @@ onBeforeUnmount(() => {
 
 // ==================== 生命周期 ====================
 onMounted(() => {
-  // 初始化送货单数据
+  // 优先加载 API 数据，降级到 mock
+  loadReceiveRecords()
+  loadPendingOrders()
+
+  // 初始化送货单数据（用于扫码快捷选择等本地查找）
   const deliveries = initMockDeliveries()
   allDeliveries.value = deliveries.map((d, i) => {
     const si = i % DEFAULT_SUPPLIERS.length
@@ -388,8 +562,6 @@ onMounted(() => {
       supplierCode: supplier?.supplierCode || d.supplierCode || '—'
     }
   })
-  // 初始化订单数据（用于待收料）
-  allOrders.value = initMockOrders(supplierList.value)
 })
 </script>
 

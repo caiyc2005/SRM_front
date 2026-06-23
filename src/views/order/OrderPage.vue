@@ -39,6 +39,7 @@ const tableData = ref([])
 const total = ref(0)
 
 const deliverySeq = mockDeliverySeq
+const useApi = ref(false)
 
 const route = useRoute()
 
@@ -86,9 +87,54 @@ const filteredData = computed(() => {
 })
 
 // ============ 方法 ============
-function loadTable() {
+async function loadOrders() {
+  // ========== 优先调后端 API ==========
+  try {
+    const params = new URLSearchParams()
+    if (query.orderCode) params.append('orderCode', query.orderCode)
+    if (query.supplierID) params.append('supplierID', query.supplierID)
+    if (query.status) params.append('status', query.status)
+    params.append('pageIndex', String(query.pageNum))
+    params.append('pageSize', String(query.pageSize))
+
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_BASE}/GetOrdersByList?${params}`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.success && result.data) {
+      const d = result.data
+      total.value = d.total
+      tableData.value = (d.list || []).map(o => ({
+        ...o,
+        status: String(o.status),
+        materialCount: o.orderDetails?.length || 0,
+        totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
+        deliveryNo: o.deliveryNo || '',
+        materials: (o.orderDetails || []).map((od, i) => ({
+          index: i + 1,
+          materialCode: od.materialCode,
+          materialName: od.materialName,
+          spec: od.spec || '',
+          qty: od.qty,
+          unitPrice: od.unitPrice,
+          amount: od.amount
+        }))
+      }))
+      if (isPendingMode()) {
+        tableData.value = tableData.value.filter(item => item.status === '0')
+      }
+      useApi.value = true
+      return
+    }
+  } catch { /* 后端不可用，降级到 mock */ }
+
+  // ========== 降级：使用 mock 数据做客户端分页 ==========
+  useApi.value = false
+  mockData.value = initMockOrders(supplierList.value)
   let data = filteredData.value
-  // 待确认列表只显示状态为「待确认」的订单
   if (isPendingMode()) {
     data = data.filter(item => item.status === '0')
   }
@@ -97,9 +143,13 @@ function loadTable() {
   tableData.value = data.slice(start, start + query.pageSize)
 }
 
+function loadTable() {
+  loadOrders()
+}
+
 function handleQuery() {
   query.pageNum = 1
-  loadTable()
+  loadOrders()
 }
 
 function handleReset() {
@@ -107,7 +157,7 @@ function handleReset() {
   query.supplierID = ''
   query.status = ''
   query.pageNum = 1
-  loadTable()
+  loadOrders()
 }
 
 function handleExport() {
@@ -300,20 +350,19 @@ function handleGenerateDelivery(row) {
 
 // ============ 生命周期 ============
 onMounted(() => {
-  mockData.value = initMockOrders(supplierList.value)
-  loadTable()
+  loadOrders()
   loadMaterials()
 })
 
 watch(
   () => [query.pageNum, query.pageSize],
-  () => loadTable()
+  () => loadOrders()
 )
 
 // 切换菜单时重新加载
 watch(() => route.path, () => {
   query.pageNum = 1
-  loadTable()
+  loadOrders()
 })
 </script>
 

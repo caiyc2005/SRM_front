@@ -11,6 +11,10 @@ import PrintDialog from './PrintDialog.vue'
 import { DEFAULT_SUPPLIERS } from '@/mock'
 import { initMockDeliveries } from '@/mock/deliveryData.js'
 
+// ============ API ============
+const API_BASE = '/api/Delivery'
+const useApi = ref(false)
+
 // ============ 数据状态 ============
 const supplierList = ref([...DEFAULT_SUPPLIERS])
 
@@ -54,16 +58,68 @@ const filteredData = computed(() => {
 })
 
 // ============ 方法 ============
-function loadTable() {
-  const data = filteredData.value
-  total.value = data.length
+async function loadDeliveries() {
+  // ========== 优先调后端 API ==========
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_BASE}/GetDeliveryNote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({
+        noteCode: query.deliveryNo || undefined,
+        supplierId: query.supplierId || undefined,
+        status: query.status !== '' && query.status != null ? (query.status === '1') : undefined,
+        page: query.pageNum,
+        pageSize: query.pageSize
+      })
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.code === 200 && result.data) {
+      const d = result.data
+      total.value = d.total
+      tableData.value = (d.items || []).map(item => ({
+        id: item.noteID,
+        deliveryNo: item.noteCode,
+        orderNo: item.orderID || '',
+        supplierId: item.supplierID || '',
+        supplierCode: '',
+        supplierName: item.supplierName || '',
+        status: item.status ? '1' : '0',
+        materialCount: item.details?.length || 0,
+        expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
+        createTime: item.createdTime ? item.createdTime.replace('T', ' ') : '',
+        receiveTime: item.deliveryDate ? item.deliveryDate.replace('T', ' ') : '',
+        operator: item.createByName || '',
+        materials: (item.details || []).map((dd, i) => ({
+          index: i + 1,
+          materialCode: dd.materialCode,
+          materialName: dd.materialName || '',
+          spec: '',
+          unit: dd.unit || '',
+          quantity: dd.quantity,
+          receivedQty: dd.receivedQty || 0,
+          remark: ''
+        }))
+      }))
+      useApi.value = true
+      return
+    }
+  } catch { /* 后端不可用，降级到 mock */ }
+
+  // ========== 降级：使用 mock 数据做客户端分页 ==========
+  useApi.value = false
+  mockData.value = initMockDeliveries()
+  const filtered = filteredData.value
+  total.value = filtered.length
   const start = (query.pageNum - 1) * query.pageSize
-  tableData.value = data.slice(start, start + query.pageSize)
+  tableData.value = filtered.slice(start, start + query.pageSize)
 }
 
 function handleQuery() {
   query.pageNum = 1
-  loadTable()
+  loadDeliveries()
 }
 
 function handleReset() {
@@ -72,19 +128,42 @@ function handleReset() {
   query.supplierId = ''
   query.status = ''
   query.pageNum = 1
-  loadTable()
+  loadDeliveries()
 }
 
-function handleDelete(row) {
+async function handleDelete(row) {
   ElMessageBox.confirm(
     `确认要删除送货单 ${row.deliveryNo} 吗？删除后不可恢复。`,
     '删除确认',
     { type: 'warning' }
-  ).then(() => {
+  ).then(async () => {
+    // 尝试调后端 API 删除
+    if (useApi.value) {
+      try {
+        const token = localStorage.getItem('token')
+        const res = await fetch(`${API_BASE}/DeleteDeliveryNote/${row.id}`, {
+          method: 'DELETE',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        })
+        const text = await res.text()
+        const result = text ? JSON.parse(text) : {}
+        if (result.code === 200) {
+          ElMessage.success('删除成功')
+          await loadDeliveries()
+          return
+        }
+        ElMessage.error(result.message || '删除失败')
+        return
+      } catch {
+        ElMessage.error('后端删除失败')
+        return
+      }
+    }
+    // 降级：从本地 mock 删除
     const index = mockData.value.findIndex(item => item.id === row.id)
     if (index > -1) mockData.value.splice(index, 1)
     ElMessage.success('删除成功')
-    loadTable()
+    loadDeliveries()
   }).catch(() => {})
 }
 
@@ -99,13 +178,12 @@ function confirmPrint() {
 
 // ============ 生命周期 ============
 onMounted(() => {
-  mockData.value = initMockDeliveries()
-  loadTable()
+  loadDeliveries()
 })
 
 watch(
   () => [query.pageNum, query.pageSize],
-  () => loadTable()
+  () => loadDeliveries()
 )
 </script>
 
