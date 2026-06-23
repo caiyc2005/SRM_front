@@ -3,12 +3,16 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppSidebar from '@/components/AppSidebar.vue'
 import Logout from '@/components/Logout.vue'
-import { MOCK_USERS, MOCK_ROLES, MOCK_USER_ROLES } from '@/mock'
 
 // ==================== API ====================
 const API_BASE = '/api/User'
 async function request(method, action, body) {
-  const opts = { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined }
+  const token = localStorage.getItem('token')
+  const opts = {
+    method,
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+  }
+  if (body) opts.body = JSON.stringify(body)
   const res = await fetch(`${API_BASE}/${action}`, opts)
   const text = await res.text()
   if (!text) return { success: false, message: '响应内容为空' }
@@ -31,7 +35,6 @@ async function loadRoles() {
     const res = await apiGet('GetRoles')
     if (res.success && res.data?.length) { roles.value = res.data; roleLoading.value = false; return }
   } catch { /* 降级 */ }
-  if (roles.value.length === 0) roles.value = JSON.parse(JSON.stringify(MOCK_ROLES))
   roleLoading.value = false
 }
 
@@ -96,7 +99,6 @@ async function loadUsers() {
     const res = await apiGet('GetUsers')
     if (res.success && res.data?.length) { users.value = res.data; return }
   } catch { /* 降级 */ }
-  if (users.value.length === 0) users.value = JSON.parse(JSON.stringify(MOCK_USERS))
 }
 
 async function loadUserRoles() {
@@ -104,7 +106,6 @@ async function loadUserRoles() {
     const res = await apiGet('GetUserRoles')
     if (res.success && res.data?.length) { userRoles.value = res.data; return }
   } catch { /* 降级 */ }
-  if (userRoles.value.length === 0) userRoles.value = JSON.parse(JSON.stringify(MOCK_USER_ROLES))
 }
 
 function getUsersByRoleId(roleId) {

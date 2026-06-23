@@ -7,7 +7,7 @@
 
 // ==================== 用户（登录 + 用户管理） ====================
 export const MOCK_USERS = [
-  { id: 'USR001', userCode: 'admin', userName: 'admin', password: 'password', roles: ['仓管员'], isDel: false, memo: '系统管理员' },
+  { id: 'USR001', userCode: 'admin', userName: 'admin', password: 'password', roles: ['管理员', 'admin'], isDel: false, memo: '系统管理员' },
   { id: 'USR002', userCode: 'buyer', userName: '采购员', password: 'password', roles: ['采购员'], isDel: false, memo: '' },
   { id: 'USR003', userCode: 'supplier', userName: '供应商', password: 'password', roles: ['供应商'], isDel: false, memo: '' },
   { id: 'USR004', userCode: 'manager', userName: '仓库经理', password: 'password', roles: ['仓管员'], isDel: false, memo: '' },

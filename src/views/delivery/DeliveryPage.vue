@@ -10,8 +10,6 @@ import Logout from '@/components/Logout.vue'
 import DeliveryTable from './DeliveryTable.vue'
 import PrintDialog from './PrintDialog.vue'
 
-import { initMockDeliveries } from '@/mock/deliveryData.js'
-
 // ============ API ============
 const API_BASE = '/api/Delivery'
 const useApi = ref(false)
@@ -44,7 +42,6 @@ const query = reactive({
   pageSize: 10
 })
 
-const mockData = ref([])
 const tableData = ref([])
 const total = ref(0)
 
@@ -64,16 +61,6 @@ const deliveryFilterFields = computed(() => [
 // 打印相关
 const printVisible = ref(false)
 const currentDelivery = ref({})
-
-// ============ 计算属性 ============
-const filteredData = computed(() => {
-  let data = [...mockData.value]
-  if (query.noteCode) data = data.filter(item => item.noteCode.includes(query.noteCode))
-  if (query.orderCode) data = data.filter(item => (item.orderCode || '').includes(query.orderCode))
-  if (query.supplierId) data = data.filter(item => item.supplierId === query.supplierId)
-  if (query.status !== '' && query.status != null) data = data.filter(item => item.status === query.status)
-  return data
-})
 
 // ============ 方法 ============
 async function loadDeliveries() {
@@ -125,15 +112,7 @@ async function loadDeliveries() {
       useApi.value = true
       return
     }
-  } catch { /* 后端不可用，降级到 mock */ }
-
-  // ========== 降级：使用 mock 数据做客户端分页 ==========
-  useApi.value = false
-  mockData.value = initMockDeliveries()
-  const filtered = filteredData.value
-  total.value = filtered.length
-  const start = (query.pageNum - 1) * query.pageSize
-  tableData.value = filtered.slice(start, start + query.pageSize)
+  } catch { /* 后端不可用 */ }
 }
 
 function handleQuery() {
@@ -156,33 +135,23 @@ async function handleDelete(row) {
     '删除确认',
     { type: 'warning' }
   ).then(async () => {
-    // 尝试调后端 API 删除
-    if (useApi.value) {
-      try {
-        const token = localStorage.getItem('token')
-        const res = await fetch(`${API_BASE}/DeleteDeliveryNote/${row.id}`, {
-          method: 'DELETE',
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        })
-        const text = await res.text()
-        const result = text ? JSON.parse(text) : {}
-        if (result.code === 200) {
-          ElMessage.success('删除成功')
-          await loadDeliveries()
-          return
-        }
-        ElMessage.error(result.message || '删除失败')
-        return
-      } catch {
-        ElMessage.error('后端删除失败')
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${API_BASE}/DeleteDeliveryNote/${row.id}`, {
+        method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      })
+      const text = await res.text()
+      const result = text ? JSON.parse(text) : {}
+      if (result.code === 200) {
+        ElMessage.success('删除成功')
+        await loadDeliveries()
         return
       }
+      ElMessage.error(result.message || '删除失败')
+    } catch {
+      ElMessage.error('后端删除失败')
     }
-    // 降级：从本地 mock 删除
-    const index = mockData.value.findIndex(item => item.id === row.id)
-    if (index > -1) mockData.value.splice(index, 1)
-    ElMessage.success('删除成功')
-    loadDeliveries()
   }).catch(() => {})
 }
 

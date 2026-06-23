@@ -12,8 +12,6 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import AppFilter from '@/components/AppFilter.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import Logout from '@/components/Logout.vue'
-import { initMockOrders } from '@/mock'
-import { initMockDeliveries } from '@/mock/deliveryData.js'
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 
@@ -108,35 +106,7 @@ async function handleSearch() {
       useApi.value = true
       return
     }
-  } catch { /* 降级到 mock */ }
-
-  // ========== 降级：从本地 mock 数据查找 ==========
-  const result = allDeliveries.value.find(
-    d => d.noteCode.toLowerCase() === kw.toLowerCase()
-  )
-
-  if (!result) {
-    foundDelivery.value = null
-    notFound.value = true
-    receiveFormItems.value = []
-    return
-  }
-
-  if (result.status === '1') {
-    ElMessage.warning('该送货单已收货，不可重复收料')
-    foundDelivery.value = null
-    notFound.value = false
-    return
-  }
-
-  notFound.value = false
-  foundDelivery.value = result
-
-  // 初始化可编辑收货数量（默认=送货数量）
-  receiveFormItems.value = result.materials.map(m => ({
-    ...m,
-    receivedQty: m.quantity
-  }))
+  } catch { /* 降级 */ }
 }
 
 /** 确认收货 */
@@ -459,8 +429,7 @@ async function loadPendingOrders() {
       }))
       return
     }
-  } catch { /* 降级到 mock */ }
-  allOrders.value = initMockOrders(supplierList.value)
+  } catch { /* 降级 */ }
 }
 
 // ==================== 扫码弹窗（真实摄像头） ====================
@@ -616,14 +585,10 @@ onBeforeUnmount(() => {
 
 // ==================== 生命周期 ====================
 onMounted(() => {
-  // 优先加载 API 数据，降级到 mock
   loadSuppliers()
   loadReceiveRecords()
   loadPendingOrders()
   loadWarehouses()
-
-  // 初始化送货单数据（用于扫码快捷选择等本地查找）
-  allDeliveries.value = initMockDeliveries()
 })
 </script>
 

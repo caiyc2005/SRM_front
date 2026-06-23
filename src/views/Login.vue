@@ -44,7 +44,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { MOCK_USERS } from '@/mock/userData'
+// import { MOCK_USERS } from '@/mock/userData'
 
 const router = useRouter()
 
@@ -117,23 +117,8 @@ const handleLogin = async () => {
     }
 
   } catch (err) {
-    // 后端连不上时，降级到模拟数据
-    console.warn('后端连接失败，使用模拟数据:', err.message)
-
-    const user = MOCK_USERS.find(
-      u => u.userCode === loginForm.userCode && u.password === loginForm.password
-    )
-
-    if (user) {
-      localStorage.setItem('token', 'mock-token')
-      localStorage.setItem('userInfo', JSON.stringify(user))
-      if (user.roles) {
-        localStorage.setItem('userRoles', JSON.stringify(user.roles))
-      }
-      router.push('/order')
-    } else {
-      alert('账号或密码错误')
-    }
+    console.error('后端连接失败:', err.message)
+    alert('无法连接到服务器，请检查网络或联系管理员')
   } finally {
     loading.value = false
   }

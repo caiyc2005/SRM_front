@@ -6,7 +6,6 @@ import AppFilter from '@/components/AppFilter.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import Logout from '@/components/Logout.vue'
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
-import { initMockOrders } from '@/mock'
 
 const API_BASE = '/api/Orders'
 const useApi = ref(false)
@@ -92,11 +91,7 @@ async function loadShipOrders() {
       useApi.value = true
       return
     }
-  } catch { /* 后端不可用，降级到 mock */ }
-
-  // ========== 降级：使用 mock 数据 ==========
-  useApi.value = false
-  allOrders.value = initMockOrders(supplierList.value)
+  } catch { /* 后端不可用 */ }
 }
 
 onMounted(() => {

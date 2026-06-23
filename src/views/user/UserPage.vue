@@ -9,11 +9,12 @@ const API_BASE = '/api/User'
 
 // ==================== 通用 API 调用 ====================
 async function request(method, action, body) {
+  const token = localStorage.getItem('token')
   const opts = {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
   }
+  if (body) opts.body = JSON.stringify(body)
   const res = await fetch(`${API_BASE}/${action}`, opts)
   // 尝试解析 JSON，若响应为空则返回默认格式
   const text = await res.text()

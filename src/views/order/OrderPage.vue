@@ -17,8 +17,6 @@ import CreateOrderDialog from './CreateOrderDialog.vue'
 
 import { getStatusText, getStatusTag, generateOrderNo, generateDeliveryNo, formatNow } from '@/utils/orderUtils'
 
-import { DEFAULT_MATERIALS, initMockOrders, deliverySeq as mockDeliverySeq } from '@/mock'
-
 // ============ API 基础路径 ============
 const API_BASE = '/api/Orders'
 
@@ -54,7 +52,6 @@ const mockData = ref([])
 const tableData = ref([])
 const total = ref(0)
 
-const deliverySeq = mockDeliverySeq
 const useApi = ref(false)
 
 const route = useRoute()
@@ -155,20 +152,7 @@ async function loadOrders() {
       useApi.value = true
       return
     }
-  } catch { /* 后端不可用，降级到 mock */ }
-
-  // ========== 降级：使用 mock 数据做客户端分页 ==========
-  useApi.value = false
-  mockData.value = initMockOrders(supplierList.value)
-  let data = filteredData.value
-  if (isPendingMode()) {
-    data = data.filter(item => item.status === '0')
-  } else if (isPendingDeliveryMode()) {
-    data = data.filter(item => item.status === '1')
-  }
-  total.value = data.length
-  const start = (query.pageNum - 1) * query.pageSize
-  tableData.value = data.slice(start, start + query.pageSize)
+  } catch { /* 后端不可用 */ }
 }
 
 function loadTable() {
@@ -227,9 +211,8 @@ async function loadMaterials() {
       return
     }
   } catch {
-    // 静默失败，降级到模拟数据
+    // 静默失败
   }
-  materialList.value = [...DEFAULT_MATERIALS]
 }
 
 // ============ 创建订单 ============
@@ -341,50 +324,15 @@ async function submitCreateOrder() {
     try { result = text ? JSON.parse(text) : {} } catch { result = {} }
 
     if (result.success) {
-      ElMessage.success('采购订单创建成功（后端）')
-    } else {
-      ElMessage.warning(result.message || '后端创建失败，已保存到本地')
+      ElMessage.success('采购订单创建成功')
+      loadTable()
+      createDialogVisible.value = false
+      return
     }
+    ElMessage.warning(result.message || '创建失败')
   } catch {
-    ElMessage.success('采购订单创建成功（本地）')
+    ElMessage.error('创建失败，后端不可用')
   }
-
-  // 后端创建成功后，同步添加到本地 mock 列表以便显示
-  let totalAmount = 0
-  const materials = merged.map((item, index) => {
-    const amount = (item.qty * item.unitPrice).toFixed(2)
-    totalAmount += Number(amount)
-    const mat = materialList.value.find(m => (m.materialID || m.materialCode) === item.materialID)
-    return {
-      index: index + 1,
-      materialID: item.materialID,
-      materialCode: mat?.materialCode || item.materialID,
-      materialName: mat?.materialName || item.materialID,
-      spec: '标准规格',
-      unit: mat?.unit || '',
-      qty: item.qty,
-      unitPrice: item.unitPrice.toFixed(2),
-      amount
-    }
-  })
-
-  const newOrder = {
-    orderID: String(mockData.value.length + 1),
-    orderCode: generateOrderNo(),
-    supplierID: createForm.supplierID,
-    supplierName: supplier ? supplier.supplierName : '',
-    status: '0',
-    materialCount: materials.length,
-    totalAmount: totalAmount.toFixed(2),
-    createTime: formatNow(),
-    materials,
-    memo: createForm.remark || '',
-    noteCode: ''
-  }
-
-  mockData.value.unshift(newOrder)
-  loadTable()
-  createDialogVisible.value = false
 }
 
 // ============ 订单操作 ============
@@ -415,13 +363,7 @@ async function handleConfirm(row) {
       return
     }
     ElMessage.error(result.message || '确认失败')
-  } catch { /* 降级到本地 */ }
-
-  // ========== 降级：本地模拟 ==========
-  const targetOrder = mockData.value.find(item => item.orderID === row.orderID)
-  if (targetOrder) targetOrder.status = '1'
-  ElMessage.success('订单确认成功（本地）')
-  loadTable()
+  } catch { /* 降级 */ }
 }
 
 async function handleGenerateDelivery(row) {
@@ -457,18 +399,7 @@ async function handleGenerateDelivery(row) {
       return
     }
     ElMessage.error(result.message || '生成送货单失败')
-  } catch { /* 降级到本地 */ }
-
-  // ========== 降级：本地模拟 ==========
-  const targetOrder = mockData.value.find(item => item.orderID === row.orderID)
-  if (targetOrder) {
-    const newDeliveryNo = generateDeliveryNo(deliverySeq.value)
-    deliverySeq.value++
-    targetOrder.status = '2'
-    targetOrder.noteCode = newDeliveryNo
-    ElMessage.success(`送货单生成成功，单号：${newDeliveryNo}（本地）`)
-    loadTable()
-  }
+  } catch { /* 降级 */ }
 }
 
 // ============ 生命周期 ============

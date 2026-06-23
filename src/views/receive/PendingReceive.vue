@@ -6,7 +6,6 @@ import AppFilter from '@/components/AppFilter.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import Logout from '@/components/Logout.vue'
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
-import { initMockOrders } from '@/mock'
 
 // ==================== 筛选配置 ====================
 const filterFields = [
@@ -26,7 +25,6 @@ const query = reactive({
 const tableRef = ref(null)
 
 onMounted(() => {
-  allOrders.value = initMockOrders(supplierList.value)
 })
 
 // 只显示已发货(status=3)的订单

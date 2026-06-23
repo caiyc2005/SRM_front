@@ -3,7 +3,7 @@
  * SupplierPage.vue — 供应商管理
  *
  * 功能：供应商列表查询、添加、编辑、启用/停用
- * 数据源：优先调用后端 API，不可用时降级到 DEFAULT_SUPPLIERS
+ * 数据源：调用后端 API
  */
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -11,13 +11,17 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import AppFilter from '@/components/AppFilter.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import Logout from '@/components/Logout.vue'
-import { DEFAULT_SUPPLIERS } from '@/mock'
 import { regionData } from 'element-china-area-data'
 
 // ==================== API ====================
 const API_BASE = '/api/Supplier'
 async function request(method, action, body) {
-  const opts = { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined }
+  const token = localStorage.getItem('token')
+  const opts = {
+    method,
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+  }
+  if (body) opts.body = JSON.stringify(body)
   const res = await fetch(`${API_BASE}/${action}`, opts)
   const text = await res.text()
   if (!text) return { success: false, message: '响应内容为空' }
@@ -73,9 +77,7 @@ async function loadSuppliers() {
   try {
     const res = await apiPost('GetAllSuppliers')
     if (res.success && res.data?.length) { supplierList.value = res.data; return }
-  } catch { /* 降级到模拟数据 */ }
-  // API 不可用或返回空时，使用 mock 数据（包含已停用供应商）
-  supplierList.value = DEFAULT_SUPPLIERS.map(s => ({ ...s }))
+  } catch { /* 后端不可用 */ }
 }
 
 function handleQuery() { query.pageNum = 1 }
