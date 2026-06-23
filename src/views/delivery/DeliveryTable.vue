@@ -12,6 +12,14 @@ import QrCodeDisplay from '@/components/QrCodeDisplay.vue'
 
 const emit = defineEmits(['pageChange', 'print', 'delete'])
 
+const tableRef = ref(null)
+
+function handleRowClick(row, _column, event) {
+  // 如果点击的是展开箭头图标本身，让默认行为生效，不重复触发
+  if (event.target.closest('.el-table__expand-icon')) return
+  tableRef.value.toggleRowExpansion(row)
+}
+
 function getStatusText(status) {
   return status === '1' ? '已收货' : '未收货'
 }
@@ -74,7 +82,7 @@ function downloadQrCode() {
       <span>共 {{ total }} 条记录</span>
     </div>
 
-    <el-table :data="tableData" row-key="id" border style="width: 100%">
+    <el-table ref="tableRef" :data="tableData" row-key="id" border style="width: 100%" @row-click="handleRowClick">
       <!-- 展开详情 -->
       <el-table-column type="expand">
         <template #default="props">
