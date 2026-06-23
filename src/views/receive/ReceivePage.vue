@@ -250,7 +250,15 @@ const historyTableData = computed(() => {
   return receiveRecords.value.slice(start, start + historyQuery.pageSize)
 })
 
+const historyTableRef = ref(null)
+
 function handleHistoryPageChange() {}
+
+function handleHistoryRowClick(row) {
+  if (historyTableRef.value) {
+    historyTableRef.value.toggleRowExpansion(row)
+  }
+}
 
 async function loadReceiveRecords() {
   try {
@@ -278,7 +286,7 @@ async function loadReceiveRecords() {
           recordId: r.receiveID,
           recordCode: r.receiveCode || '',
           noteCode: r.noteCode || '',
-          orderNo: '',
+          orderNo: r.orderNo || r.orderID || r.orderCode || '',
           supplierName: r.supplierName || '',
           operator: r.receiveUserName || '',
           receiveDate: r.receiveDate ? r.receiveDate.replace('T', ' ').slice(0, 16) : '',
@@ -752,7 +760,7 @@ onMounted(() => {
               />
 
               <template v-else>
-                <el-table :data="historyTableData" stripe border style="width: 100%">
+                <el-table ref="historyTableRef" :data="historyTableData" stripe border style="width: 100%" @row-click="handleHistoryRowClick">
                   <el-table-column type="expand">
                     <template #default="{ row }">
                       <div class="detail-content">
