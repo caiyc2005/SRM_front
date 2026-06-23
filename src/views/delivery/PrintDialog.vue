@@ -101,7 +101,7 @@ async function handleExport() {
 
     <template #footer>
       <el-button @click="emit('update:visible', false)">取消</el-button>
-      <el-button type="primary" :loading="exporting" @click="handleExport">导出 PDF</el-button>
+      <el-button type="primary" :loading="exporting" @click="handleExport">导出</el-button>
     </template>
   </el-dialog>
 </template>
