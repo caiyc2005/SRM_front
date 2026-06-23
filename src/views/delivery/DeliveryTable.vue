@@ -8,6 +8,7 @@ defineProps({
 import { ref } from 'vue'
 import AppPagination from '@/components/AppPagination.vue'
 import BarcodeDisplay from '@/components/BarcodeDisplay.vue'
+import QrCodeDisplay from '@/components/QrCodeDisplay.vue'
 
 const emit = defineEmits(['pageChange', 'print', 'delete'])
 
@@ -22,6 +23,46 @@ function downloadBarcode(noteCode) {
   const link = document.createElement('a')
   link.download = `条形码_${noteCode}.png`
   link.href = canvas.toDataURL('image/png')
+  link.click()
+}
+
+// ============ 条形码（默认） / 二维码（可切换） ============
+// const barcodeDialogVisible = ref(false)
+// const currentBarcodeRow = ref(null)
+
+// function showBarcodeDialog(row) {
+//   currentBarcodeRow.value = row
+//   barcodeDialogVisible.value = true
+// }
+
+// /** 下载条形码为 PNG 图片 */
+// function downloadBarcodeFromTable(noteCode) {
+//   const canvas = document.querySelector(`#table-barcode-${noteCode}`)
+//   if (!canvas) return
+//   const link = document.createElement('a')
+//   link.download = `条形码_${noteCode}.png`
+//   link.href = canvas.toDataURL('image/png')
+//   link.click()
+// }
+
+// ============ 二维码（备用，取消注释下方代码以切换） ============
+const qrDialogVisible = ref(false)
+const currentQrRow = ref(null)
+const qrDisplayRef = ref(null)
+
+function showQrDialog(row) {
+  currentQrRow.value = row
+  qrDialogVisible.value = true
+}
+
+/** 下载二维码为 PNG 图片 */
+function downloadQrCode() {
+  if (!qrDisplayRef.value) return
+  const dataUrl = qrDisplayRef.value.getDataURL()
+  if (!dataUrl) return
+  const link = document.createElement('a')
+  link.download = `二维码_${currentQrRow.value?.noteCode || 'qr'}.png`
+  link.href = dataUrl
   link.click()
 }
 </script>
@@ -61,27 +102,44 @@ function downloadBarcode(noteCode) {
               <el-table-column prop="remark" label="备注" min-width="120" align="center" />
             </el-table>
 
-            <!-- <div class="detail-title" style="margin-top: 15px;">送货单条码</div>
-            <div class="barcode-row">
-              <div class="barcode-img">
-                <BarcodeDisplay :value="props.row.noteCode" :canvas-id="`barcode-canvas-${props.row.noteCode}`"
-                  :width="200" :height="60" />
-              </div>
-              <div class="barcode-actions">
-                <el-button type="primary" size="small" @click="downloadBarcode(props.row.noteCode)">
-                  <el-icon>
-                    <Download />
-                  </el-icon>
-                  下载条码
-                </el-button>
-                <span class="barcode-hint">扫码收料时扫描此条码</span>
-              </div>
-            </div> -->
           </div>
         </template>
       </el-table-column>
 
       <el-table-column prop="noteCode" label="送货单号" width="180" align="center" resizable="false" />
+      
+      
+      
+      <!-- 默认显示条形码；如需切换为二维码，取消下方 QR 块的注释并注释掉上一行的 barcode 块 -->
+      <!-- <el-table-column label="条形码" width="120" align="center" resizable="false">
+        <template #default="scope">
+          <BarcodeDisplay
+            :value="scope.row.noteCode"
+            :canvas-id="`table-barcode-${scope.row.noteCode}`"
+            :width="100"
+            :height="26"
+            style="cursor: pointer; display: inline-block;"
+            @click.stop="showBarcodeDialog(scope.row)"
+          />
+        </template>
+      </el-table-column> -->
+
+
+      <!-- QR 二维码（备用）-->
+      <el-table-column label="二维码" width="80" align="center" resizable="false">
+        <template #default="scope">
+          <QrCodeDisplay
+            :value="scope.row.noteCode"
+            :size="44"
+            :canvas-id="`qr-${scope.row.noteCode}`"
+            style="cursor: pointer; display: inline-block;"
+            @click.stop="showQrDialog(scope.row)"
+          />
+        </template>
+      </el-table-column>
+      
+
+
       <el-table-column prop="orderCode" label="对应订单号" width="180" align="center" resizable="false" />
       <el-table-column prop="supplierName" label="供应商名称" min-width="200" align="center" resizable="false" />
       <el-table-column label="收货状态" width="100" align="center" resizable="false">
@@ -110,6 +168,61 @@ function downloadBarcode(noteCode) {
     </el-table>
     <!-- 分页 -->
     <AppPagination :total="total" :query="query" @change="emit('pageChange')" />
+
+    <!-- 条形码放大弹窗（默认）；如需切换为二维码，取消下方 QR dialog 注释并注释掉本块 -->
+    <!-- <el-dialog
+      v-model="barcodeDialogVisible"
+      title="条形码"
+      width="400px"
+      align-center
+      :close-on-click-modal="true"
+    >
+   
+      <div class="barcode-dialog-body" v-if="currentBarcodeRow">
+        <div class="barcode-dialog-img">
+          <BarcodeDisplay
+            :value="currentBarcodeRow.noteCode"
+            :width="320"
+            :height="80"
+          />
+        </div>
+        <div class="barcode-dialog-info">
+          <div>送货单号：{{ currentBarcodeRow.noteCode }}</div>
+          <el-button type="primary" @click="downloadBarcodeFromTable(currentBarcodeRow.noteCode)">
+            <el-icon><Download /></el-icon>
+            下载条形码
+          </el-button>
+        </div>
+      </div>
+    </el-dialog> -->
+
+
+    <!-- QR 二维码弹窗（备用）-->
+    <el-dialog
+      v-model="qrDialogVisible"
+      title="二维码"
+      width="360px"
+      align-center
+      :close-on-click-modal="true"
+    >
+      <div class="qr-dialog-body" v-if="currentQrRow">
+        <div class="qr-dialog-code">
+          <QrCodeDisplay
+            ref="qrDisplayRef"
+            :value="currentQrRow.noteCode"
+            :size="200"
+          />
+        </div>
+        <div class="qr-dialog-info">
+          <div>送货单号：{{ currentQrRow.noteCode }}</div>
+          <el-button type="primary" @click="downloadQrCode">
+            <el-icon><Download /></el-icon>
+            下载二维码
+          </el-button>
+        </div>
+      </div>
+    </el-dialog>
+    
   </div>
 </template>
 
@@ -175,5 +288,54 @@ function downloadBarcode(noteCode) {
 .barcode-hint {
   font-size: 12px;
   color: #909399;
+}
+
+.barcode-dialog-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+}
+
+.barcode-dialog-img {
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+}
+
+.barcode-dialog-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #333;
+}
+
+/* QR 二维码弹窗样式（备用） */
+.qr-dialog-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+}
+
+.qr-dialog-code {
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+}
+
+.qr-dialog-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #333;
 }
 </style>
