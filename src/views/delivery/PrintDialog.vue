@@ -1,35 +1,12 @@
 <script setup>
 import BarcodeDisplay from '@/components/BarcodeDisplay.vue'
 
-// 二维码方案（切换为条形码，保留供后续切换）
-// import { ref, watch, nextTick } from 'vue'
-// import QRCode from 'qrcode'
-
 const props = defineProps({
   visible: { type: Boolean, required: true },
   delivery: { type: Object, required: true }
 })
 
 const emit = defineEmits(['update:visible', 'print'])
-
-// 二维码方案（已切换为条形码，保留供后续切换）
-// const qrDataUrl = ref('')
-//
-// watch(
-//   () => [props.visible, props.delivery?.deliveryNo],
-//   async ([visible]) => {
-//     if (visible && props.delivery?.deliveryNo) {
-//       await nextTick()
-//       const content = `http://srm/receive?deliveryNo=${props.delivery.deliveryNo}`
-//       qrDataUrl.value = await QRCode.toDataURL(content, {
-//         width: 80,
-//         margin: 1,
-//         color: { dark: '#000', light: '#fff' }
-//       })
-//     }
-//   },
-//   { immediate: false }
-// )
 </script>
 
 <template>
@@ -89,19 +66,6 @@ const emit = defineEmits(['update:visible', 'print'])
           </div>
           <div class="barcode-text">扫码收料</div>
         </div>
-
-        <!-- 二维码方案（已切换为条形码，保留模板供后续切换） -->
-        <!--
-        <div class="print-qrcode">
-          <div>
-            <div class="qrcode-box">
-              <img v-if="qrDataUrl" :src="qrDataUrl" alt="二维码" />
-              <span v-else>二维码</span>
-            </div>
-            <div class="qrcode-text">扫码收料</div>
-          </div>
-        </div>
-        -->
       </div>
     </div>
 
@@ -165,33 +129,6 @@ const emit = defineEmits(['update:visible', 'print'])
   font-size: 12px;
   margin-top: 4px;
 }
-
-/* 二维码方案（保留样式供后续切换） */
-/*
-.print-qrcode {
-  display: flex;
-  justify-content: flex-end;
-}
-.qrcode-box {
-  width: 80px;
-  height: 80px;
-  border: 1px solid #333;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-}
-.qrcode-box img {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-.qrcode-text {
-  text-align: center;
-  font-size: 12px;
-  margin-top: 4px;
-}
-*/
 
 @media print {
   :deep(.el-dialog__header),
