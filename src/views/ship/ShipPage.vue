@@ -156,7 +156,7 @@ async function handleShip(row) {
   // ========== 优先调后端 API ==========
   try {
     const token = localStorage.getItem('token')
-    const res = await fetch(`${API_BASE}/DeliveryConfirm`, {
+    const res = await fetch(`/api/Delivery/DeliveryConfirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
       body: JSON.stringify({ orderID: row.orderID, supplierID: row.supplierID || '', supplierName: row.supplierName || '' })
