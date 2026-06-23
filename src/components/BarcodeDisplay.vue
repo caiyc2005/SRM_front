@@ -3,14 +3,7 @@
  * BarcodeDisplay.vue
  *
  * 条形码组件 — 使用 jsbarcode 生成 Code128 条形码。
- *
- * ## 扫码枪兼容说明
- * 标准的条形码可以很好地被扫码枪识别。
- * 生产线/仓库场景建议使用条形码，通用性好、成本低。
- *
- * ## 切换回二维码
- * 若后续需要切换回二维码，替换此组件内容即可，
- * 或启用下方注释掉的 QRCode 方案。
+ * 编码内容为送货单号，收料时扫码自动识别。
  */
 import { ref, watch, onMounted } from 'vue'
 import JsBarcode from 'jsbarcode'
@@ -21,7 +14,9 @@ const props = defineProps({
   /** 显示宽度 */
   width: { type: Number, default: 160 },
   /** 显示高度 */
-  height: { type: Number, default: 50 }
+  height: { type: Number, default: 50 },
+  /** canvas 元素 id（用于下载定位） */
+  canvasId: { type: String, default: '' }
 })
 
 const canvasRef = ref(null)
@@ -49,41 +44,5 @@ onMounted(renderBarcode)
 </script>
 
 <template>
-  <canvas ref="canvasRef" :width="width" :height="height" />
+  <canvas ref="canvasRef" :id="canvasId || undefined" :width="width" :height="height" />
 </template>
-
-<!--
-==============================================================================
-  如需切换回二维码，取消下方注释并删除上方内容即可：
-==============================================================================
-<script setup>
-import { ref, watch, onMounted } from 'vue'
-import QRCode from 'qrcode'
-
-const props = defineProps({
-  value: { type: String, required: true },
-  width: { type: Number, default: 80 },
-  height: { type: Number, default: 80 }
-})
-
-const imgSrc = ref('')
-
-async function renderQR() {
-  if (!props.value) return
-  const content = `http://srm/receive?deliveryNo=${props.value}`
-  imgSrc.value = await QRCode.toDataURL(content, {
-    width: props.width,
-    margin: 1,
-    color: { dark: '#000', light: '#fff' }
-  })
-}
-
-watch(() => props.value, renderQR)
-onMounted(renderQR)
-</script>
-
-<template>
-  <img v-if="imgSrc" :src="imgSrc" :width="width" :height="height" alt="二维码" />
-  <span v-else>二维码</span>
-</template>
--->

@@ -5,12 +5,24 @@ defineProps({
   query: { type: Object, required: true }
 })
 
+import { ref } from 'vue'
 import AppPagination from '@/components/AppPagination.vue'
+import BarcodeDisplay from '@/components/BarcodeDisplay.vue'
 
 const emit = defineEmits(['pageChange', 'print', 'delete'])
 
 function getStatusText(status) {
   return status === '1' ? '已收货' : '未收货'
+}
+
+/** 下载条形码为 PNG 图片 */
+function downloadBarcode(deliveryNo) {
+  const canvas = document.querySelector(`#barcode-canvas-${deliveryNo}`)
+  if (!canvas) return
+  const link = document.createElement('a')
+  link.download = `条形码_${deliveryNo}.png`
+  link.href = canvas.toDataURL('image/png')
+  link.click()
 }
 </script>
 
@@ -48,6 +60,23 @@ function getStatusText(status) {
               <el-table-column prop="quantity" label="送货数量" width="100" align="center" />
               <el-table-column prop="remark" label="备注" min-width="120" align="center" />
             </el-table>
+
+            <!-- <div class="detail-title" style="margin-top: 15px;">送货单条码</div>
+            <div class="barcode-row">
+              <div class="barcode-img">
+                <BarcodeDisplay :value="props.row.deliveryNo" :canvas-id="`barcode-canvas-${props.row.deliveryNo}`"
+                  :width="200" :height="60" />
+              </div>
+              <div class="barcode-actions">
+                <el-button type="primary" size="small" @click="downloadBarcode(props.row.deliveryNo)">
+                  <el-icon>
+                    <Download />
+                  </el-icon>
+                  下载条码
+                </el-button>
+                <span class="barcode-hint">扫码收料时扫描此条码</span>
+              </div>
+            </div> -->
           </div>
         </template>
       </el-table-column>
@@ -72,13 +101,8 @@ function getStatusText(status) {
           <el-button type="primary" link size="small" @click="emit('print', scope.row)">
             打印
           </el-button>
-          <el-button
-            type="danger"
-            link
-            size="small"
-            :disabled="scope.row.status === '1'"
-            @click="emit('delete', scope.row)"
-          >
+          <el-button type="danger" link size="small" :disabled="scope.row.status === '1'"
+            @click="emit('delete', scope.row)">
             删除
           </el-button>
         </template>
@@ -98,16 +122,19 @@ function getStatusText(status) {
   margin-bottom: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
+
 .table-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
 }
+
 .detail-content {
   padding: 15px;
   background: #fafafa;
 }
+
 .detail-info {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -115,13 +142,39 @@ function getStatusText(status) {
   margin-bottom: 15px;
   font-size: 13px;
 }
+
 .detail-info span {
   color: #666;
 }
+
 .detail-title {
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 10px;
   color: #333;
+}
+
+.barcode-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.barcode-img {
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+}
+
+.barcode-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.barcode-hint {
+  font-size: 12px;
+  color: #909399;
 }
 </style>

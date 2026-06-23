@@ -6,7 +6,7 @@
  *       Tab2：收料记录查询
  *       Tab3：待收料列表
  */
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppSidebar from '@/components/AppSidebar.vue'
 import AppFilter from '@/components/AppFilter.vue'
@@ -15,6 +15,7 @@ import Logout from '@/components/Logout.vue'
 import { DEFAULT_SUPPLIERS, initMockOrders } from '@/mock'
 import { initMockDeliveries } from '@/mock/deliveryData.js'
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 
 // ==================== Tab 控制 ====================
 const activeTab = ref('receive')
@@ -223,14 +224,79 @@ function handleReceive(row) {
   }).catch(() => {})
 }
 
-// ==================== 扫码弹窗 ====================
+// ==================== 扫码弹窗（真实摄像头） ====================
 const scanVisible = ref(false)
 const scanInput = ref('')
 const scanLoading = ref(false)
+const cameraError = ref('')
+let html5QrCode = null
 
-function openScanner() {
+async function openScanner() {
   scanInput.value = ''
+  cameraError.value = ''
   scanVisible.value = true
+
+  await nextTick()
+  try {
+    html5QrCode = new Html5Qrcode('scan-reader')
+    await html5QrCode.start(
+      { facingMode: 'environment' },
+      {
+        fps: 10,
+        // 扫码区域：宽高比适配条形码（宽度>高度）
+        qrbox: { width: 280, height: 120 },
+        // 同时支持条形码和二维码
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.QR_CODE
+        ],
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        }
+      },
+      (decodedText) => {
+        // 扫码成功
+        handleScanResult(decodedText)
+      },
+      () => {
+        // 扫码失败（每帧未识别到，静默忽略）
+      }
+    )
+  } catch (err) {
+    cameraError.value = '摄像头启动失败：' + (err.message || err)
+    console.error('Html5Qrcode start error:', err)
+  }
+}
+
+function handleScanResult(code) {
+  if (!code) return
+  // 播放提示音
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    osc.frequency.value = 800
+    osc.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.1)
+  } catch (_) { /* 忽略音频错误 */ }
+
+  ElMessage.success(`扫码成功：${code}`)
+  stopScanner()
+  scanVisible.value = false
+  searchNoteCode.value = code
+  handleSearch()
+}
+
+async function stopScanner() {
+  if (html5QrCode && html5QrCode.isScanning) {
+    try {
+      await html5QrCode.stop()
+    } catch (_) { /* 忽略停止错误 */ }
+  }
+  html5QrCode = null
 }
 
 function handleScanConfirm() {
@@ -239,17 +305,75 @@ function handleScanConfirm() {
     ElMessage.warning('请输入或扫描送货单号')
     return
   }
+  stopScanner()
   scanVisible.value = false
   searchNoteCode.value = code
   handleSearch()
 }
 
-/** 快捷选择送货单（模拟扫码演示） */
+// ==================== 本地图片扫码 ====================
+const fileInputRef = ref(null)
+const fileScanning = ref(false)
+
+function triggerFileSelect() {
+  fileInputRef.value?.click()
+}
+
+async function handleFileScan(event) {
+  const file = event.target?.files?.[0]
+  if (!file) return
+
+  if (!file.type.startsWith('image/')) {
+    ElMessage.warning('请选择图片文件')
+    return
+  }
+
+  fileScanning.value = true
+  try {
+    // 仅使用 Chrome 原生 BarcodeDetector（支持 CODE128 等一维条码）
+    // html5-qrcode 的 scanFile 不支持条码格式，不降级
+    if (!('BarcodeDetector' in window)) {
+      ElMessage.error('当前浏览器不支持图片扫码，请使用 Chrome/Edge 浏览器，或使用摄像头扫码')
+      return
+    }
+
+    const bitmap = await createImageBitmap(file)
+    const detector = new BarcodeDetector({
+      formats: ['code_128', 'code_39', 'ean_13', 'qr_code']
+    })
+    const results = await detector.detect(bitmap)
+    bitmap.close()
+
+    if (results.length > 0) {
+      handleScanResult(results[0].rawValue)
+    } else {
+      ElMessage.warning('图片中未检测到条码或二维码')
+    }
+  } catch (err) {
+    console.error('图片识别错误:', err)
+    ElMessage.warning('识别失败：' + (err?.message || err?.toString() || '未知错误'))
+  } finally {
+    fileScanning.value = false
+    event.target.value = ''
+  }
+}
+
+function handleScanDialogClose() {
+  stopScanner()
+  scanVisible.value = false
+}
+
+/** 快捷选择送货单（演示备用） */
 function quickSelectDelivery(deliveryNo) {
+  stopScanner()
   scanVisible.value = false
   searchNoteCode.value = deliveryNo
   handleSearch()
 }
+
+onBeforeUnmount(() => {
+  stopScanner()
+})
 
 // ==================== 生命周期 ====================
 onMounted(() => {
@@ -553,36 +677,55 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- ==================== 扫码窗口 ==================== -->
+    <!-- ==================== 扫码窗口（真实摄像头） ==================== -->
     <el-dialog
       :model-value="scanVisible"
       title="扫码收料"
       width="560px"
       :close-on-click-modal="false"
+      :before-close="handleScanDialogClose"
       destroy-on-close
-      @update:model-value="scanVisible = $event"
     >
       <div class="scan-dialog-body">
-        <!-- 模拟扫码区域 -->
-        <div class="scan-area">
-          <div class="scan-frame">
-            <div class="scan-line"></div>
-            <span class="scan-corner top-left"></span>
-            <span class="scan-corner top-right"></span>
-            <span class="scan-corner bottom-left"></span>
-            <span class="scan-corner bottom-right"></span>
-          </div>
-          <div class="scan-tip">
-            <el-icon class="is-loading" size="20"><Loading /></el-icon>
-            请将条形码/二维码对准扫描框
-          </div>
+        <!-- 摄像头扫码区域 -->
+        <div v-if="!cameraError" class="camera-box">
+          <div id="scan-reader" class="scan-reader"></div>
         </div>
+
+        <!-- 摄像头错误提示 -->
+        <div v-if="cameraError" class="camera-error">
+          <el-icon size="40" color="#f56c6c"><WarningFilled /></el-icon>
+          <p>{{ cameraError }}</p>
+          <p class="error-hint">请检查浏览器是否授予摄像头权限，或使用下方手动输入</p>
+        </div>
+
+        <!-- 上传本地图片 -->
+        <!-- <div class="scan-upload-row">
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept="image/*"
+            style="display: none"
+            @change="handleFileScan"
+          />
+          <el-button
+            type="primary"
+            plain
+            size="large"
+            :loading="fileScanning"
+            @click="triggerFileSelect"
+          >
+            <el-icon size="20"><FolderOpened /></el-icon>
+            识别本地图片
+          </el-button>
+          <span class="upload-hint">选择含有条码/二维码的截图或照片</span>
+        </div> -->
 
         <!-- 手动输入 -->
         <div class="scan-input-row">
           <el-input
             v-model="scanInput"
-            placeholder="输入送货单号后按回车"
+            placeholder="摄像头不可用时，可手动输入送货单号后按回车"
             size="large"
             clearable
             @keyup.enter="handleScanConfirm"
@@ -593,9 +736,9 @@ onMounted(() => {
           </el-input>
         </div>
 
-        <!-- 快捷选择（演示用） -->
+        <!-- 快捷选择（备用） -->
         <div class="quick-list">
-          <div class="quick-list-title">快捷选择（演示扫码）</div>
+          <div class="quick-list-title">快捷选择（点击即查）</div>
           <div class="quick-items">
             <el-button
               v-for="d in allDeliveries.slice(0, 8)"
@@ -616,7 +759,7 @@ onMounted(() => {
       </div>
 
       <template #footer>
-        <el-button @click="scanVisible = false">关闭</el-button>
+        <el-button @click="handleScanDialogClose">关闭</el-button>
         <el-button type="primary" @click="handleScanConfirm" :loading="scanLoading">
           <el-icon><Search /></el-icon>
           确认查询
@@ -716,38 +859,40 @@ onMounted(() => {
 .scan-dialog-body {
   display: flex; flex-direction: column; align-items: center; gap: 20px;
 }
-.scan-area {
-  width: 280px; height: 220px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: #1a1a2e; border-radius: 12px;
-}
-.scan-frame {
-  position: relative;
-  width: 200px; height: 140px;
-  display: flex; align-items: center; justify-content: center;
-}
-.scan-line {
-  position: absolute;
-  width: 100%; height: 2px;
-  background: linear-gradient(90deg, transparent, #00d4ff, #00d4ff, transparent);
-  animation: scanMove 2s ease-in-out infinite;
-}
-@keyframes scanMove {
-  0% { top: 0; }
-  50% { top: 100%; }
-  100% { top: 0; }
-}
-.scan-corner {
-  position: absolute; width: 20px; height: 20px; border-color: #00d4ff; border-style: solid;
-}
-.scan-corner.top-left { top: 0; left: 0; border-width: 3px 0 0 3px; }
-.scan-corner.top-right { top: 0; right: 0; border-width: 3px 3px 0 0; }
-.scan-corner.bottom-left { bottom: 0; left: 0; border-width: 0 0 3px 3px; }
-.scan-corner.bottom-right { bottom: 0; right: 0; border-width: 0 3px 3px 0; }
 
-.scan-tip {
-  color: #8899aa; font-size: 13px; margin-top: 10px;
-  display: flex; align-items: center; gap: 6px;
+/* 摄像头区域 */
+.camera-box {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+.scan-reader {
+  width: 100%;
+}
+/* html5-qrcode 内部元素适配 */
+.scan-reader :deep(video) {
+  width: 100% !important;
+  height: auto !important;
+  border-radius: 8px;
+}
+.scan-reader :deep(#qr-shaded-region) {
+  border-width: 50px !important;
+}
+
+/* 摄像头错误 */
+.camera-error {
+  width: 100%; text-align: center; padding: 30px 0; color: #666;
+}
+.camera-error p { margin-top: 10px; }
+.error-hint { font-size: 13px; color: #909399; }
+
+.scan-upload-row {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+}
+.upload-hint {
+  font-size: 13px; color: #909399;
 }
 
 .scan-input-row {
