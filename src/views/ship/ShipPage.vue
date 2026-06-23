@@ -25,6 +25,7 @@ const filterFields = [
 // ==================== 数据 ====================
 const supplierList = ref([])
 const allOrders = ref([])
+const tableRef = ref(null)
 
 async function loadSuppliers() {
   try {
@@ -146,6 +147,12 @@ function handleReset() {
   query.pageNum = 1
 }
 
+function handleRowClick(row) {
+  if (tableRef.value) {
+    tableRef.value.toggleRowExpansion(row)
+  }
+}
+
 // ==================== 操作 ====================
 async function handleShip(row) {
   try {
@@ -204,7 +211,7 @@ async function handleShip(row) {
             <span>共 {{ filteredOrders.length }} 条</span>
           </div>
 
-          <el-table :data="tableData" stripe border style="width: 100%">
+          <el-table ref="tableRef" :data="tableData" stripe border style="width: 100%" @row-click="handleRowClick">
             <el-table-column type="expand">
               <template #default="{ row }">
                 <div class="detail-content">
