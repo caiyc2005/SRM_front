@@ -50,13 +50,24 @@ const deliveryStatusOptions = [
   { label: '未收货', value: '0' },
   { label: '已收货', value: '1' }
 ]
+
+// 当前用户角色
+const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]')
+const isSupplier = userRoles.some(r => r === 'supplier' || r === '供应商')
+
 // 送货单筛选显示字段
-const deliveryFilterFields = computed(() => [
-  { key: 'noteCode', label: '送货单号', type: 'input', width: 220 },
-  { key: 'orderCode', label: '对应订单号', type: 'input', width: 220 },
-  { key: 'supplierId', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'supplierName', valueKey: 'supplierID' },
-  { key: 'status', label: '收货状态', type: 'select', width: 180, options: deliveryStatusOptions }
-])
+const deliveryFilterFields = computed(() => {
+  const fields = [
+    { key: 'noteCode', label: '送货单号', type: 'input', width: 220 },
+    { key: 'orderCode', label: '对应订单号', type: 'input', width: 220 }
+  ]
+  // 供应商不显示供应商筛选
+  if (!isSupplier) {
+    fields.push({ key: 'supplierId', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'supplierName', valueKey: 'supplierID' })
+  }
+  fields.push({ key: 'status', label: '收货状态', type: 'select', width: 180, options: deliveryStatusOptions })
+  return fields
+})
 
 // 打印相关
 const printVisible = ref(false)

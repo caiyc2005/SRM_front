@@ -109,19 +109,27 @@ const menuItems = [
       { key: 'order-query', label: '订单一览表', path: '/order/query' },
       { key: 'order-create', label: '创建采购单', path: '/order/create' },
       { key: 'order-pending', label: '确认采购单', path: '/order/pending' },
+      
+    ]
+  },
+    {
+    key: 'warehouse',
+    label: '🚚 送货单管理 ',
+    children: [
       { key: 'order-pending-delivery', label: '生成送货单', path: '/order/pending-delivery' },
+      { key: 'delivery', label: '送货单查询', path: '/delivery' },
+      { key: 'delivery-print', label: '打印送货单', path: '/delivery/printlist' },
     ]
   },
   {
     key: 'warehouse',
-    label: '🏭 货物管理 🚚 ',
+    label: '🏭 货物管理  ',
     children: [
-      { key: 'delivery', label: '送货单查询', path: '/delivery' },
-      { key: 'delivery-print', label: '打印送货单', path: '/delivery/printlist' },
       { key: 'ship', label: '供应商发货', path: '/ship' },
       { key: 'receive', label: '收料入库', path: '/receive' }
     ]
-  }
+  },
+
   
 ]
 

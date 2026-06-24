@@ -63,6 +63,10 @@ function isPendingDeliveryMode() {
   return route.path === '/order/pending-delivery'
 }
 
+// 当前用户角色
+const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]')
+const isSupplier = userRoles.some(r => r === 'supplier' || r === '供应商')
+
 // 筛选字段配置（待确认/待生成送货单列表不显示状态筛选）
 const orderStatusOptions = [
   { label: '待确认', value: '0' },
@@ -74,9 +78,12 @@ const orderStatusOptions = [
 ]
 const orderFilterFields = computed(() => {
   const fields = [
-    { key: 'orderCode', label: '订单编号', type: 'input', width: 220 },
-    { key: 'supplierID', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'supplierName', valueKey: 'supplierID' }
+    { key: 'orderCode', label: '订单编号', type: 'input', width: 220 }
   ]
+  // 供应商角色在生成送货单页面不显示供应商筛选
+  if (!isPendingDeliveryMode() || !isSupplier) {
+    fields.push({ key: 'supplierID', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'supplierName', valueKey: 'supplierID' })
+  }
   if (!isPendingMode() && !isPendingDeliveryMode()) {
     fields.push({ key: 'status', label: '订单状态', type: 'select', width: 180, options: orderStatusOptions })
   }
