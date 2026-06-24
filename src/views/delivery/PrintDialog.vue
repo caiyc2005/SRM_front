@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import BarcodeDisplay from '@/components/BarcodeDisplay.vue'
+import QrCodeDisplay from '@/components/QrCodeDisplay.vue'
 
 const props = defineProps({
   visible: { type: Boolean, required: true },
@@ -84,6 +85,20 @@ async function handleExport() {
           </tbody>
         </table>
 
+        <!-- 二维码显示 -->
+        <div class="print-qrcode">
+          <div class="qrcode-box">
+            <QrCodeDisplay
+              v-if="delivery.noteCode"
+              :value="delivery.noteCode"
+              :size="120"
+            />
+            <span v-else>二维码</span>
+          </div>
+          <div class="qrcode-text">扫码收料</div>
+        </div>
+
+        <!-- 条形码（注释保留，方便后续切换）
         <div class="print-barcode">
           <div class="barcode-box">
             <BarcodeDisplay
@@ -96,6 +111,7 @@ async function handleExport() {
           </div>
           <div class="barcode-text">扫码收料</div>
         </div>
+        -->
       </div>
     </div>
 
@@ -146,7 +162,22 @@ async function handleExport() {
   font-size: 14px;
 }
 
-/* 条形码区域 */
+/* 二维码区域 */
+.print-qrcode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.qrcode-box {
+  padding: 6px 10px;
+  background: #fff;
+}
+.qrcode-text {
+  text-align: center;
+  font-size: 12px;
+  margin-top: 4px;
+}
+/* 条形码区域（保留，方便后续切换）
 .print-barcode {
   display: flex;
   flex-direction: column;
@@ -161,6 +192,7 @@ async function handleExport() {
   font-size: 12px;
   margin-top: 4px;
 }
+*/
 
 </style>
 
@@ -250,6 +282,25 @@ async function handleExport() {
     font-weight: 600;
   }
 
+  .print-qrcode {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .qrcode-box {
+    padding: 4px 8px;
+    background: #fff;
+  }
+
+  .qrcode-text {
+    text-align: center;
+    font-size: 9pt;
+    margin-top: 2px;
+    color: #555;
+  }
+
+  /* 条形码（保留，方便后续切换）
   .print-barcode {
     display: flex;
     flex-direction: column;
@@ -267,5 +318,6 @@ async function handleExport() {
     margin-top: 2px;
     color: #555;
   }
+  */
 }
 </style>
