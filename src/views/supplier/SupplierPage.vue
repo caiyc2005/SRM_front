@@ -108,8 +108,9 @@ function openEdit(row) {
 function findRegionPath(addr, nodes) {
   for (const node of nodes) {
     if (addr.startsWith(node.label)) {
+      const remaining = addr.slice(node.label.length).trim()
       if (node.children && node.children.length > 0) {
-        const childPath = findRegionPath(addr, node.children)
+        const childPath = findRegionPath(remaining, node.children)
         if (childPath) return [node.label, ...childPath]
       }
       return [node.label]

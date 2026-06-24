@@ -12,6 +12,7 @@ import InventoryPage from '@/views/basic/InventoryPage.vue'
 import WarehousePage from '@/views/basic/WarehousePage.vue'
 import CreateOrderPage from '@/views/order/CreateOrderPage.vue'
 import DeliveryPrintListPage from '@/views/delivery/DeliveryPrintListPage.vue'
+import PDAReceivePage from '@/views/receive/PDAReceivePage.vue'
 
 /**
  * 角色-页面访问配置
@@ -87,6 +88,12 @@ const routes = [
     name: 'Receive',
     component: ReceivePage,
     meta: { roles: ['仓管员', '管理员', 'admin'], title: '收料入库' }
+  },
+  {
+    path: '/receive/pda',
+    name: 'PDAReceive',
+    component: PDAReceivePage,
+    meta: { roles: ['whclerk', '仓管员', '管理员', 'admin'], title: 'PDA收料' }
   },
   // ========== 基础信息 ==========
   {

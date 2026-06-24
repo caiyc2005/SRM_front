@@ -251,14 +251,27 @@ function handleClearSearch() {
 }
 
 // ==================== Tab2：收料记录 ====================
+const historyKeyword = ref('')
+
 const historyQuery = reactive({
   pageNum: 1,
   pageSize: 10
 })
 
+const filteredHistoryRecords = computed(() => {
+  const kw = historyKeyword.value.trim().toLowerCase()
+  if (!kw) return receiveRecords.value
+  return receiveRecords.value.filter(r =>
+    r.noteCode.toLowerCase().includes(kw) ||
+    r.recordCode.toLowerCase().includes(kw) ||
+    r.orderCode.toLowerCase().includes(kw) ||
+    r.supplierName.toLowerCase().includes(kw)
+  )
+})
+
 const historyTableData = computed(() => {
   const start = (historyQuery.pageNum - 1) * historyQuery.pageSize
-  return receiveRecords.value.slice(start, start + historyQuery.pageSize)
+  return filteredHistoryRecords.value.slice(start, start + historyQuery.pageSize)
 })
 
 const historyTableRef = ref(null)
@@ -825,13 +838,31 @@ onMounted(() => {
 
             <!-- ==================== Tab2：收料记录 ==================== -->
             <el-tab-pane label="收料记录" name="history">
+              <div class="history-search">
+                <el-input
+                  v-model="historyKeyword"
+                  placeholder="搜索送货单号 / 收料单号 / 订单号 / 供应商"
+                  clearable
+                  size="default"
+                  style="width: 360px"
+                  @input="historyQuery.pageNum = 1"
+                  @keyup.enter="historyQuery.pageNum = 1"
+                >
+                  <template #prefix>
+                    <el-icon><Search /></el-icon>
+                  </template>
+                </el-input>
+                <el-button type="primary" @click="historyQuery.pageNum = 1">查询</el-button>
+                <el-button @click="historyKeyword = ''; historyQuery.pageNum = 1">重置</el-button>
+              </div>
+
               <div class="table-header">
                 <span>收料记录列表</span>
-                <span>共 {{ receiveRecords.length }} 条</span>
+                <span>共 {{ filteredHistoryRecords.length }} 条</span>
               </div>
 
               <el-empty
-                v-if="receiveRecords.length === 0"
+                v-if="filteredHistoryRecords.length === 0"
                 description="暂无收料记录"
               />
 
@@ -885,7 +916,7 @@ onMounted(() => {
                 </el-table>
 
                 <AppPagination
-                  :total="receiveRecords.length"
+                  :total="filteredHistoryRecords.length"
                   :query="historyQuery"
                   @change="handleHistoryPageChange"
                 />
@@ -1202,5 +1233,12 @@ onMounted(() => {
 }
 .quick-items .el-button {
   font-family: monospace;
+}
+
+.history-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 </style>
