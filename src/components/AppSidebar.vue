@@ -40,7 +40,11 @@ const visibleMenuItems = computed(() => {
 // 待确认订单计数
 const pendingCount = ref(0)
 
+/** 当前用户是否有权查看"确认采购单"（只有该菜单显示待确认角标） */
+const canViewPendingOrder = computed(() => hasPathAccess('/order/pending'))
+
 async function fetchPendingCount() {
+  if (!canViewPendingOrder.value) return
   try {
     const token = localStorage.getItem('token')
     const res = await fetch('/api/Orders/GetOrdersByList?status=0&pageIndex=1&pageSize=1', {
@@ -58,6 +62,7 @@ async function fetchPendingCount() {
 let pollTimer = null
 
 function startPolling() {
+  if (!canViewPendingOrder.value) return
   stopPolling()
   pollTimer = setInterval(fetchPendingCount, 60000)
 }

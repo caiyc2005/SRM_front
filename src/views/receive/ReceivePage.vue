@@ -127,6 +127,13 @@ async function handleConfirmReceive() {
     return
   }
 
+  // 检查所选仓库是否已停用
+  const selectedWare = wareList.value.find(w => w.wareID === selectedWareID.value)
+  if (selectedWare && (selectedWare.isDel ?? selectedWare.IsDel)) {
+    ElMessage.warning('所选仓库已被禁用，请重新选择仓库')
+    return
+  }
+
   // 基本校验
   for (const item of items) {
     if (item.receivedQty == null || item.receivedQty === '') {
@@ -186,6 +193,9 @@ async function handleConfirmReceive() {
         foundDelivery.value = null
         receiveFormItems.value = []
         searchNoteCode.value = ''
+        // 刷新待收料列表和收料记录
+        loadPendingOrders()
+        loadReceiveRecords()
         return
       }
       ElMessage.error(result.message || '后端收货失败，尝试本地记录')
@@ -726,7 +736,7 @@ onMounted(() => {
                     style="width: 250px"
                   >
                     <el-option
-                      v-for="w in wareList"
+                      v-for="w in wareList.filter(w => !(w.isDel ?? w.IsDel))"
                       :key="w.wareID"
                       :label="`${w.wareCode} - ${w.name}`"
                       :value="w.wareID"

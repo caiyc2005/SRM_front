@@ -22,24 +22,8 @@ const filterFields = [
 ]
 
 // ==================== 数据 ====================
-const supplierList = ref([])
 const allOrders = ref([])
 const tableRef = ref(null)
-
-async function loadSuppliers() {
-  try {
-    const token = localStorage.getItem('token')
-    const res = await fetch('/api/Supplier/GetAllSuppliers', {
-      method: 'POST',
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    })
-    const text = await res.text()
-    const result = text ? JSON.parse(text) : {}
-    if (result.success && result.data?.length) {
-      supplierList.value = result.data
-    }
-  } catch { /* 降级 */ }
-}
 
 const query = reactive({
   shipFilter: '',
@@ -56,10 +40,12 @@ async function loadShipOrders() {
     params.append('pageSize', '999') // 一次性拉取，客户端筛选
 
     const token = localStorage.getItem('token')
+    let userInfo = { userID: '' }
+    try { userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}') } catch {}
     const res = await fetch(`/api/Delivery/GetDeliveryNote`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ page: 1, pageSize: 999 })
+      body: JSON.stringify({ page: 1, pageSize: 999, userID: userInfo.userID || undefined })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
@@ -95,7 +81,6 @@ async function loadShipOrders() {
 }
 
 onMounted(() => {
-  loadSuppliers()
   loadShipOrders()
 })
 
