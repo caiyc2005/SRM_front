@@ -531,29 +531,55 @@ async function handleFileScan(event) {
   const file = event.target?.files?.[0]
   if (!file) return
 
-  if (!file.type.startsWith('image/')) {
-    ElMessage.warning('请选择图片文件')
+  const allowedImageTypes = ['image/png', 'image/jpeg', 'image/bmp', 'image/webp', 'image/tiff']
+  const allowedExtensions = ['.png', '.jpg', '.jpeg', '.bmp', '.webp', '.tiff', '.tif']
+  const fileExt = '.' + file.name.split('.').pop().toLowerCase()
+
+  if (!allowedImageTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
+    ElMessage.warning('请选择图片文件（支持 PNG / JPG / BMP / WebP / TIFF 格式）')
     return
   }
 
   fileScanning.value = true
   try {
-    // 仅使用 Chrome 原生 BarcodeDetector（支持 CODE128 等一维条码）
-    // html5-qrcode 的 scanFile 不支持条码格式，不降级
-    if (!('BarcodeDetector' in window)) {
-      ElMessage.error('当前浏览器不支持图片扫码，请使用 Chrome/Edge 浏览器，或使用摄像头扫码')
-      return
+    let decodedText = null
+
+    // 1️⃣ 优先使用 Chrome 原生 BarcodeDetector（速度快，本地解码）
+    if ('BarcodeDetector' in window) {
+      try {
+        const bitmap = await createImageBitmap(file)
+        const detector = new BarcodeDetector({
+          formats: ['code_128', 'code_39', 'ean_13', 'qr_code']
+        })
+        const results = await detector.detect(bitmap)
+        bitmap.close()
+        if (results.length > 0) {
+          decodedText = results[0].rawValue
+        }
+      } catch {
+        // BarcodeDetector 失败，降级到 html5-qrcode
+      }
     }
 
-    const bitmap = await createImageBitmap(file)
-    const detector = new BarcodeDetector({
-      formats: ['code_128', 'code_39', 'ean_13', 'qr_code']
-    })
-    const results = await detector.detect(bitmap)
-    bitmap.close()
+    // 2️⃣ 降级：使用 html5-qrcode.scanFile（兼容所有浏览器）
+    if (!decodedText) {
+      try {
+        decodedText = await Html5Qrcode.scanFile(file, false, {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.QR_CODE
+          ]
+        })
+      } catch (scanErr) {
+        console.error('html5-qrcode scanFile 错误:', scanErr)
+      }
+    }
 
-    if (results.length > 0) {
-      handleScanResult(results[0].rawValue)
+    if (decodedText) {
+      handleScanResult(decodedText)
     } else {
       ElMessage.warning('图片中未检测到条码或二维码')
     }
@@ -927,11 +953,11 @@ onMounted(() => {
         </div>
 
         <!-- 上传本地图片 -->
-        <!-- <div class="scan-upload-row">
+         <div class="scan-upload-row">
           <input
             ref="fileInputRef"
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/jpg,image/bmp,image/webp,image/tiff"
             style="display: none"
             @change="handleFileScan"
           />
@@ -946,7 +972,7 @@ onMounted(() => {
             识别本地图片
           </el-button>
           <span class="upload-hint">选择含有条码/二维码的截图或照片</span>
-        </div> -->
+        </div> 
 
         <!-- 手动输入 -->
         <div class="scan-input-row">
