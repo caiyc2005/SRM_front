@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import AppSidebar from '@/components/AppSidebar.vue'
 import AppFilter from '@/components/AppFilter.vue'
 import AppPagination from '@/components/AppPagination.vue'
@@ -151,7 +151,11 @@ function handleRowClick(row) {
 }
 
 // ==================== 操作 ====================
-async function handleShip(row) {
+const shipDialogVisible = ref(false)
+const expectDate = ref('')
+const currentShipRow = ref(null)
+
+function handleShip(row) {
   // 根据当前状态给出不同提示
   if (row.status === '3') {
     ElMessage.info('该送货单已发货，无需重复操作')
@@ -162,34 +166,52 @@ async function handleShip(row) {
     return
   }
 
-  // 待发货（status === '2'）走正常发货流程
-  try {
-    await ElMessageBox.confirm(
-      `确认订单「${row.orderCode}」已发货吗？`,
-      '发货确认',
-      { type: 'warning', confirmButtonText: '确认发货' }
-    )
-  } catch { return }
+  // 弹出对话框，选择预计送达时间
+  currentShipRow.value = row
+  expectDate.value = ''
+  shipDialogVisible.value = true
+}
 
-  // ========== 优先调后端 API ==========
+async function confirmShip() {
+  if (!currentShipRow.value) return
+  const row = currentShipRow.value
+
+  // 关闭弹窗
+  shipDialogVisible.value = false
+
+  // ========== 调后端 API ==========
   try {
     const token = localStorage.getItem('token')
     const res = await fetch(`/api/Delivery/DeliveryConfirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ orderID: row.orderID, supplierID: row.supplierID || '', supplierName: row.supplierName || '' })
+      body: JSON.stringify({
+        orderID: row.orderID,
+        supplierID: row.supplierID || '',
+        supplierName: row.supplierName || '',
+        expectedDate: expectDate.value || undefined
+      })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
 
-    if (result.success) {
+    if (result.code === 200) {
       ElMessage.success(`订单 ${row.orderCode} 已确认发货`)
+      // 刷新列表
+      await loadShipOrders()
       return
     }
     ElMessage.error(result.message || '发货确认失败')
   } catch {
     ElMessage.error('后端接口不可用，发货确认失败')
   }
+}
+
+/** 日期选择器：禁止选择今天之前的日期 */
+function disabledDate(time) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return time.getTime() < today.getTime()
 }
 </script>
 
@@ -285,6 +307,38 @@ async function handleShip(row) {
         </el-card>
       </div>
     </div>
+
+    <!-- 确认发货弹窗 -->
+    <el-dialog
+      v-model="shipDialogVisible"
+      title="发货确认"
+      width="420px"
+      align-center
+    >
+      <div class="ship-dialog-body">
+        <div class="ship-dialog-info">
+          <div>订单编号：<b>{{ currentShipRow?.orderCode }}</b></div>
+          <div>供应商：<b>{{ currentShipRow?.supplierName }}</b></div>
+        </div>
+        <div class="ship-dialog-date">
+          <span>预计送达时间：</span>
+          <el-date-picker
+            v-model="expectDate"
+            type="date"
+            placeholder="请选择预计送达日期"
+            value-format="YYYY-MM-DD"
+            style="width: 200px"
+            :disabled-date="disabledDate"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="shipDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmShip">
+          确认发货
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -300,4 +354,14 @@ async function handleShip(row) {
 .detail-info { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; font-size: 13px; }
 .detail-info span { color: #666; }
 .red-price { color: #f56c6c; font-weight: 500; }
+
+.ship-dialog-body {
+  display: flex; flex-direction: column; gap: 16px; padding: 10px 0;
+}
+.ship-dialog-info {
+  display: flex; flex-direction: column; gap: 8px; font-size: 14px;
+}
+.ship-dialog-date {
+  display: flex; align-items: center; gap: 10px; font-size: 14px;
+}
 </style>
