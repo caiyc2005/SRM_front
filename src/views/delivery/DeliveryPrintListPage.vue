@@ -2,7 +2,7 @@
 import { reactive, ref, computed, onMounted, watch } from 'vue'
 
 // 已有 computed 导入
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 
 import AppSidebar from '@/components/AppSidebar.vue'
 import AppFilter from '@/components/AppFilter.vue'
@@ -34,7 +34,6 @@ async function loadSuppliers() {
 
 const query = reactive({
   noteCode: '',
-  // orderNo: '',
   orderCode: '',
   supplierId: '',
   status: '',
@@ -72,7 +71,7 @@ async function loadDeliveries() {
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
       body: JSON.stringify({
         noteCode: query.noteCode || undefined,
-        orderCode: query.orderCode || undefined,//把orderCode字段传给后端
+        orderCode: query.orderCode || undefined,
         supplierId: query.supplierId || undefined,
         status: query.status !== '' && query.status != null ? (query.status === '1') : undefined,
         page: query.pageNum,
@@ -102,7 +101,7 @@ async function loadDeliveries() {
           index: i + 1,
           materialCode: dd.materialCode,
           materialName: dd.materialName || '',
-          spec: dd.spec,// || dd.specification || '',
+          spec: dd.spec,
           unit: dd.unit || '',
           quantity: dd.quantity,
           receivedQty: dd.receivedQty || 0,
@@ -129,32 +128,6 @@ function handleReset() {
   loadDeliveries()
 }
 
-async function handleDelete(row) {
-  ElMessageBox.confirm(
-    `确认要删除送货单 ${row.noteCode} 吗？删除后不可恢复。`,
-    '删除确认',
-    { type: 'warning' }
-  ).then(async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${API_BASE}/DeleteDeliveryNote/${row.id}`, {
-        method: 'DELETE',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      })
-      const text = await res.text()
-      const result = text ? JSON.parse(text) : {}
-      if (result.code === 200) {
-        ElMessage.success('删除成功')
-        await loadDeliveries()
-        return
-      }
-      ElMessage.error(result.message || '删除失败')
-    } catch {
-      ElMessage.error('后端删除失败')
-    }
-  }).catch(() => {})
-}
-
 function handlePrint(row) {
   currentDelivery.value = row
   printVisible.value = true
@@ -178,7 +151,7 @@ watch(
 
     <div class="main">
       <div class="header">
-        <h3>送货单管理</h3>
+        <h3>打印送货单</h3>
         <Logout />
       </div>
 
@@ -194,8 +167,8 @@ watch(
           :table-data="tableData"
           :total="total"
           :query="query"
+          hide-delete
           @print="handlePrint"
-          @delete="handleDelete"
         />
       </div>
     </div>

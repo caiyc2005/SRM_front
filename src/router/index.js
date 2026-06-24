@@ -11,7 +11,7 @@ import MaterialManagement from '@/views/basic/MaterialManagement.vue'
 import InventoryPage from '@/views/basic/InventoryPage.vue'
 import WarehousePage from '@/views/basic/WarehousePage.vue'
 import CreateOrderPage from '@/views/order/CreateOrderPage.vue'
-import DeliveryPrintPage from '@/views/delivery/DeliveryPrintPage.vue'
+import DeliveryPrintListPage from '@/views/delivery/DeliveryPrintListPage.vue'
 
 /**
  * 角色-页面访问配置
@@ -44,7 +44,7 @@ const routes = [
     path: '/order/pending-delivery',
     name: 'OrderPendingDelivery',
     component: OrderPage,
-    meta: { roles: ['采购员', '管理员', 'admin'], title: '生成送货单' }
+    meta: { roles: ['采购员', '管理员', 'admin','supplier'], title: '生成送货单' }
   },
   {
     path: '/order/query',
@@ -65,10 +65,10 @@ const routes = [
     meta: { roles: ['仓管员', '供应商', '管理员', 'admin'], title: '送货单查询' }
   },
   {
-    path: '/delivery/print',
-    name: 'DeliveryPrint',
-    component: DeliveryPrintPage,
-    meta: { roles: ['仓管员', '供应商', '管理员', 'admin'], title: '打印送货单' }
+    path: '/delivery/printlist',
+    name: 'DeliveryPrintList',
+    component: DeliveryPrintListPage,
+    meta: { roles: ['仓管员', '供应商', '管理员', 'admin','supplier'], title: '打印送货单' }
   },
   {
     path: '/ship',

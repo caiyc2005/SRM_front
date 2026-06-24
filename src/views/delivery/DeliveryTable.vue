@@ -2,7 +2,8 @@
 defineProps({
   tableData: { type: Array, required: true },
   total: { type: Number, required: true },
-  query: { type: Object, required: true }
+  query: { type: Object, required: true },
+  hideDelete: { type: Boolean, default: false }
 })
 
 import { ref } from 'vue'
@@ -162,12 +163,12 @@ function downloadQrCode() {
       <el-table-column prop="createTime" label="创建时间" width="160" align="center" resizable="false" />
 
       <!-- 操作列 -->
-      <el-table-column label="操作" width="180" align="center" resizable="false">
+      <el-table-column label="操作" :width="hideDelete ? 80 : 180" align="center" resizable="false">
         <template #default="scope">
           <el-button type="primary" link size="small" @click="emit('print', scope.row)">
             打印
           </el-button>
-          <el-button type="danger" link size="small" :disabled="scope.row.status === '1'"
+          <el-button v-if="!hideDelete" type="danger" link size="small" :disabled="scope.row.status === '1'"
             @click="emit('delete', scope.row)">
             删除
           </el-button>

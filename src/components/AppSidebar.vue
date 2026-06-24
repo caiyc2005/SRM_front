@@ -117,6 +117,7 @@ const menuItems = [
     label: '🏭 货物管理 🚚 ',
     children: [
       { key: 'delivery', label: '送货单查询', path: '/delivery' },
+      { key: 'delivery-print', label: '打印送货单', path: '/delivery/printlist' },
       { key: 'ship', label: '供应商发货', path: '/ship' },
       { key: 'receive', label: '收料入库', path: '/receive' }
     ]
