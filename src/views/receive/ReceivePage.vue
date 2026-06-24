@@ -538,29 +538,55 @@ async function handleFileScan(event) {
   const file = event.target?.files?.[0]
   if (!file) return
 
-  if (!file.type.startsWith('image/')) {
-    ElMessage.warning('请选择图片文件')
+  const allowedImageTypes = ['image/png', 'image/jpeg', 'image/bmp', 'image/webp', 'image/tiff']
+  const allowedExtensions = ['.png', '.jpg', '.jpeg', '.bmp', '.webp', '.tiff', '.tif']
+  const fileExt = '.' + file.name.split('.').pop().toLowerCase()
+
+  if (!allowedImageTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
+    ElMessage.warning('请选择图片文件（支持 PNG / JPG / BMP / WebP / TIFF 格式）')
     return
   }
 
   fileScanning.value = true
   try {
-    // 仅使用 Chrome 原生 BarcodeDetector（支持 CODE128 等一维条码）
-    // html5-qrcode 的 scanFile 不支持条码格式，不降级
-    if (!('BarcodeDetector' in window)) {
-      ElMessage.error('当前浏览器不支持图片扫码，请使用 Chrome/Edge 浏览器，或使用摄像头扫码')
-      return
+    let decodedText = null
+
+    // 1️⃣ 优先使用 Chrome 原生 BarcodeDetector（速度快，本地解码）
+    if ('BarcodeDetector' in window) {
+      try {
+        const bitmap = await createImageBitmap(file)
+        const detector = new BarcodeDetector({
+          formats: ['code_128', 'code_39', 'ean_13', 'qr_code']
+        })
+        const results = await detector.detect(bitmap)
+        bitmap.close()
+        if (results.length > 0) {
+          decodedText = results[0].rawValue
+        }
+      } catch {
+        // BarcodeDetector 失败，降级到 html5-qrcode
+      }
     }
 
-    const bitmap = await createImageBitmap(file)
-    const detector = new BarcodeDetector({
-      formats: ['code_128', 'code_39', 'ean_13', 'qr_code']
-    })
-    const results = await detector.detect(bitmap)
-    bitmap.close()
+    // 2️⃣ 降级：使用 html5-qrcode.scanFile（兼容所有浏览器）
+    if (!decodedText) {
+      try {
+        decodedText = await Html5Qrcode.scanFile(file, false, {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.QR_CODE
+          ]
+        })
+      } catch (scanErr) {
+        console.error('html5-qrcode scanFile 错误:', scanErr)
+      }
+    }
 
-    if (results.length > 0) {
-      handleScanResult(results[0].rawValue)
+    if (decodedText) {
+      handleScanResult(decodedText)
     } else {
       ElMessage.warning('图片中未检测到条码或二维码')
     }
@@ -628,6 +654,21 @@ onMounted(() => {
                     <template #prefix>
                       <el-icon><Search /></el-icon>
                     </template>
+                    <template #suffix>
+                      <el-button
+                        class="scan-btn-inner"
+                        circle
+                        @click.stop="openScanner"
+                      >
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M3 7V3h4"/>
+                          <path d="M17 3h4v4"/>
+                          <path d="M21 17v4h-4"/>
+                          <path d="M7 21H3v-4"/>
+                          <line x1="8" y1="12" x2="16" y2="12" stroke-width="2.5"/>
+                        </svg>
+                      </el-button>
+                    </template>
                     <template #append>
                       <el-button type="primary" @click="handleSearch">
                         <el-icon><Search /></el-icon>
@@ -635,20 +676,17 @@ onMounted(() => {
                       </el-button>
                     </template>
                   </el-input>
-                  <el-button
-                    type="primary"
-                    size="large"
-                    circle
-                    class="scan-btn"
-                    @click="openScanner"
-                  >
-                    <el-icon size="22"><Camera /></el-icon>
-                  </el-button>
                 </div>
                 <div class="search-hint">
                   <el-icon><InfoFilled /></el-icon>
-                  扫描送货单条形码，或手动输入送货单号进行查询 — 点击右侧
-                  <el-icon style="margin: 0 2px"><Camera /></el-icon>
+                  扫描送货单条形码，或手动输入送货单号进行查询 — 点击输入框内
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#909399" stroke-width="2" stroke-linecap="round" style="vertical-align: middle; margin: 0 2px;">
+                    <path d="M3 7V3h4"/>
+                    <path d="M17 3h4v4"/>
+                    <path d="M21 17v4h-4"/>
+                    <path d="M7 21H3v-4"/>
+                    <line x1="8" y1="12" x2="16" y2="12" stroke-width="2.5"/>
+                  </svg>
                   可打开扫码窗口
                 </div>
               </div>
@@ -936,11 +974,11 @@ onMounted(() => {
         </div>
 
         <!-- 上传本地图片 -->
-        <!-- <div class="scan-upload-row">
+         <div class="scan-upload-row">
           <input
             ref="fileInputRef"
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/jpg,image/bmp,image/webp,image/tiff"
             style="display: none"
             @change="handleFileScan"
           />
@@ -955,7 +993,7 @@ onMounted(() => {
             识别本地图片
           </el-button>
           <span class="upload-hint">选择含有条码/二维码的截图或照片</span>
-        </div> -->
+        </div> 
 
         <!-- 手动输入 -->
         <div class="scan-input-row">
@@ -1078,17 +1116,23 @@ onMounted(() => {
 .detail-info span { color: #666; }
 .red-price { color: #f56c6c; font-weight: 500; }
 
-/* 扫码按钮 */
-.scan-btn {
-  flex-shrink: 0;
-  width: 48px; height: 48px;
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+/* 输入框内扫码按钮 */
+.scan-btn-inner {
+  width: 32px; height: 32px;
+  padding: 0;
+  background: transparent;
   border: none;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.4);
+  color: #1890ff;
+  font-size: 20px;
+  transition: all 0.2s;
 }
-.scan-btn:hover {
-  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.5);
+.scan-btn-inner:hover {
+  color: #40a9ff;
+  background: rgba(24, 144, 255, 0.08);
+  transform: scale(1.1);
+}
+.scan-btn-inner:active {
+  transform: scale(0.95);
 }
 
 /* 扫码弹窗 */
