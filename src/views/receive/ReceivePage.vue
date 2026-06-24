@@ -541,10 +541,21 @@ async function handleFileScan(event) {
   }
 
   fileScanning.value = true
+
+  // 准备好一个隐藏容器供 Html5Qrcode 实例使用（scanFile 是实例方法，需要 DOM 元素）
+  let scanContainer = document.getElementById('scan-file-hidden')
+  if (!scanContainer) {
+    scanContainer = document.createElement('div')
+    scanContainer.id = 'scan-file-hidden'
+    scanContainer.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:300px;height:300px;opacity:0;pointer-events:none;'
+    document.body.appendChild(scanContainer)
+  }
+
+  let fileScanner = null
   try {
     let decodedText = null
 
-    // 1️⃣ 优先使用 Chrome 原生 BarcodeDetector（速度快，本地解码）
+    // 1️⃣ 优先使用 Chrome 原生 BarcodeDetector（速度快，支持条码+二维码）
     if ('BarcodeDetector' in window) {
       try {
         const bitmap = await createImageBitmap(file)
@@ -557,24 +568,17 @@ async function handleFileScan(event) {
           decodedText = results[0].rawValue
         }
       } catch {
-        // BarcodeDetector 失败，降级到 html5-qrcode
+        // BarcodeDetector 失败则降级
       }
     }
 
-    // 2️⃣ 降级：使用 html5-qrcode.scanFile（兼容所有浏览器）
+    // 2️⃣ 降级：Html5Qrcode 实例的 scanFile（兼容所有浏览器，支持二维码）
     if (!decodedText) {
+      fileScanner = new Html5Qrcode('scan-file-hidden')
       try {
-        decodedText = await Html5Qrcode.scanFile(file, false, {
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.QR_CODE
-          ]
-        })
+        decodedText = await fileScanner.scanFile(file, false)
       } catch (scanErr) {
-        console.error('html5-qrcode scanFile 错误:', scanErr)
+        console.error('Html5Qrcode scanFile 错误:', scanErr)
       }
     }
 
@@ -587,6 +591,10 @@ async function handleFileScan(event) {
     console.error('图片识别错误:', err)
     ElMessage.warning('识别失败：' + (err?.message || err?.toString() || '未知错误'))
   } finally {
+    // 清理实例（重要：释放内部资源）
+    if (fileScanner) {
+      try { await fileScanner.clear() } catch {}
+    }
     fileScanning.value = false
     event.target.value = ''
   }
