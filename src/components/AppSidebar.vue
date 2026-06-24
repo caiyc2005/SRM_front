@@ -113,7 +113,7 @@ const menuItems = [
     ]
   },
     {
-    key: 'warehouse',
+    key: 'delivery',
     label: '🚚 送货单管理 ',
     children: [
       { key: 'order-pending-delivery', label: '生成送货单', path: '/order/pending-delivery' },
@@ -122,7 +122,7 @@ const menuItems = [
     ]
   },
   {
-    key: 'warehouse',
+    key: 'cargo',
     label: '🏭 货物管理  ',
     children: [
       { key: 'ship', label: '供应商发货', path: '/ship' },
