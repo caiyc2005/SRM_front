@@ -67,7 +67,7 @@ async function loadShipOrders() {
     if (result.code === 200 && result.data) {
       allOrders.value = (result.data.items || []).map(item => ({
         orderID: item.orderID ,//|| item.noteID,
-        orderCode: item.noteCode,
+        orderCode: item.orderCode ,//|| item.noteCode,
         supplierID: item.supplierID || '',
         supplierName: item.supplierName || '',
         status: String(item.orderStatus ?? (item.status ? 3 : 2)),
@@ -186,15 +186,9 @@ async function handleShip(row) {
       ElMessage.success(`订单 ${row.orderCode} 已确认发货`)
       return
     }
-    // API 返回失败也降级
-  } catch { /* 后端无此接口，降级到本地 */ }
-
-  // ========== 降级：本地模拟 ==========
-  const target = allOrders.value.find(o => o.orderID === row.orderID)
-  if (target) {
-    target.status = '3'
-    allOrders.value = allOrders.value.slice()
-    ElMessage.success(`订单 ${row.orderCode} 已更新为「已发货」（本地）`)
+    ElMessage.error(result.message || '发货确认失败')
+  } catch {
+    ElMessage.error('后端接口不可用，发货确认失败')
   }
 }
 </script>

@@ -72,8 +72,12 @@ async function handleSearch() {
 
     if (result.code === 200 && result.data?.items?.length) {
       const item = result.data.items[0]
-      if (item.status) {
-        ElMessage.warning('该送货单已收货，不可重复收料')
+      // 检查是否所有物料都已收完（累计已收 >= 送货数量）
+      const allFullyReceived = (item.details || []).every(
+        dd => (dd.receivedQty || 0) >= dd.quantity
+      )
+      if (allFullyReceived) {
+        ElMessage.warning('该送货单所有物料已全部收完，不可重复收料')
         foundDelivery.value = null
         notFound.value = false
         return
@@ -95,13 +99,15 @@ async function handleSearch() {
           spec: dd.spec || '',
           unit: dd.unit || '',
           quantity: dd.quantity,
+          historyReceived: dd.receivedQty || 0,
+          remaining: Math.max(0, dd.quantity - (dd.receivedQty || 0)),
           receivedQty: 0,
           remark: ''
         }))
       }
       receiveFormItems.value = foundDelivery.value.materials.map(m => ({
         ...m,
-        receivedQty: m.quantity
+        receivedQty: m.remaining
       }))
       useApi.value = true
       return
@@ -131,19 +137,20 @@ async function handleConfirmReceive() {
       ElMessage.warning(`物料「${item.materialName}」的实收数量不能为负数`)
       return
     }
-    if (Number(item.receivedQty) > item.quantity) {
-      ElMessage.warning(`物料「${item.materialName}」的实收数量不能超过送货数量(${item.quantity})`)
+    if (Number(item.receivedQty) > item.remaining) {
+      ElMessage.warning(`物料「${item.materialName}」的剩余应收数量为 ${item.remaining}，本次实收不能超过此数量`)
       return
     }
   }
 
   const totalPlan = items.reduce((s, i) => s + i.quantity, 0)
+  const totalHistory = items.reduce((s, i) => s + (i.historyReceived || 0), 0)
   const totalReceived = items.reduce((s, i) => s + Number(i.receivedQty), 0)
 
   try {
     await ElMessageBox.confirm(
-      `确认收货？\n计划总数：${totalPlan}，实收总数：${totalReceived}` +
-      (totalPlan !== totalReceived ? `\n差异：${totalPlan - totalReceived}` : ''),
+      `确认收货？\n送货总数：${totalPlan}，累计已收：${totalHistory}，本次实收：${totalReceived}` +
+      (totalPlan !== totalHistory + totalReceived ? `\n仍差：${totalPlan - totalHistory - totalReceived}` : ''),
       '确认收料',
       { type: 'warning', confirmButtonText: '确认收货' }
     )
@@ -696,29 +703,39 @@ onMounted(() => {
                   <el-table-column prop="materialName" label="物料名称" min-width="140" />
                   <el-table-column prop="spec" label="规格" width="110" align="center" />
                   <el-table-column prop="unit" label="单位" width="70" align="center" />
-                  <el-table-column label="送货数量" width="110" align="center">
+                  <el-table-column label="送货数量" width="90" align="center">
                     <template #default="{ row }">
                       <b>{{ row.quantity }}</b>
                     </template>
                   </el-table-column>
-                  <el-table-column label="实收数量" width="160" align="center">
+                  <el-table-column label="已收数量" width="90" align="center">
+                    <template #default="{ row }">
+                      <span style="color: #666">{{ row.historyReceived }}</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="剩余应收" width="90" align="center">
+                    <template #default="{ row }">
+                      <b style="color: #1890ff">{{ row.remaining }}</b>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="本次实收" width="160" align="center">
                     <template #default="{ row, $index }">
                       <el-input-number
                         v-model="receiveFormItems[$index].receivedQty"
                         :min="0"
-                        :max="row.quantity"
+                        :max="row.remaining"
                         size="small"
                         style="width: 130px"
                       />
                     </template>
                   </el-table-column>
-                  <el-table-column label="差异" width="80" align="center">
+                  <el-table-column label="仍差" width="70" align="center">
                     <template #default="{ row }">
                       <el-tag
-                        :type="row.quantity - row.receivedQty === 0 ? 'success' : 'warning'"
+                        :type="row.remaining - row.receivedQty === 0 ? 'success' : 'warning'"
                         size="small"
                       >
-                        {{ row.quantity - row.receivedQty }}
+                        {{ row.remaining - row.receivedQty }}
                       </el-tag>
                     </template>
                   </el-table-column>
@@ -727,16 +744,20 @@ onMounted(() => {
 
                 <div class="confirm-bar">
                   <span class="confirm-summary">
-                    计划总数：<b>{{ receiveFormItems.reduce((s, i) => s + i.quantity, 0) }}</b>
+                    送货总数：<b>{{ receiveFormItems.reduce((s, i) => s + i.quantity, 0) }}</b>
                     &nbsp;&nbsp;|&nbsp;&nbsp;
-                    实收总数：<b style="color: #1890ff">{{
+                    累计已收：<b style="color: #67c23a">{{
+                      receiveFormItems.reduce((s, i) => s + (i.historyReceived || 0), 0)
+                    }}</b>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    本次实收：<b style="color: #1890ff">{{
                       receiveFormItems.reduce((s, i) => s + Number(i.receivedQty || 0), 0)
                     }}</b>
                     &nbsp;&nbsp;|&nbsp;&nbsp;
-                    差异：<b :style="{ color: receiveFormItems.reduce((s, i) => s + i.quantity, 0) -
+                    仍差：<b :style="{ color: receiveFormItems.reduce((s, i) => s + i.remaining, 0) -
                       receiveFormItems.reduce((s, i) => s + Number(i.receivedQty || 0), 0) === 0
                       ? '#67c23a' : '#e6a23c' }">{{
-                      receiveFormItems.reduce((s, i) => s + i.quantity, 0) -
+                      receiveFormItems.reduce((s, i) => s + i.remaining, 0) -
                       receiveFormItems.reduce((s, i) => s + Number(i.receivedQty || 0), 0)
                     }}</b>
                   </span>
