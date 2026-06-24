@@ -126,7 +126,8 @@ const menuItems = [
     label: '🏭 货物管理  ',
     children: [
       { key: 'ship', label: '供应商发货', path: '/ship' },
-      { key: 'receive', label: '收料入库', path: '/receive' }
+      { key: 'receive', label: '收料入库', path: '/receive' },
+      { key: 'receive-pda', label: 'PDA收料', path: '/receive/pda' }
     ]
   },
 
