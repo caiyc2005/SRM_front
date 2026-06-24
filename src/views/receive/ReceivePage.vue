@@ -621,6 +621,21 @@ onMounted(() => {
                     <template #prefix>
                       <el-icon><Search /></el-icon>
                     </template>
+                    <template #suffix>
+                      <el-button
+                        class="scan-btn-inner"
+                        circle
+                        @click.stop="openScanner"
+                      >
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M3 7V3h4"/>
+                          <path d="M17 3h4v4"/>
+                          <path d="M21 17v4h-4"/>
+                          <path d="M7 21H3v-4"/>
+                          <line x1="8" y1="12" x2="16" y2="12" stroke-width="2.5"/>
+                        </svg>
+                      </el-button>
+                    </template>
                     <template #append>
                       <el-button type="primary" @click="handleSearch">
                         <el-icon><Search /></el-icon>
@@ -628,20 +643,17 @@ onMounted(() => {
                       </el-button>
                     </template>
                   </el-input>
-                  <el-button
-                    type="primary"
-                    size="large"
-                    circle
-                    class="scan-btn"
-                    @click="openScanner"
-                  >
-                    <el-icon size="22"><Camera /></el-icon>
-                  </el-button>
                 </div>
                 <div class="search-hint">
                   <el-icon><InfoFilled /></el-icon>
-                  扫描送货单条形码，或手动输入送货单号进行查询 — 点击右侧
-                  <el-icon style="margin: 0 2px"><Camera /></el-icon>
+                  扫描送货单条形码，或手动输入送货单号进行查询 — 点击输入框内
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#909399" stroke-width="2" stroke-linecap="round" style="vertical-align: middle; margin: 0 2px;">
+                    <path d="M3 7V3h4"/>
+                    <path d="M17 3h4v4"/>
+                    <path d="M21 17v4h-4"/>
+                    <path d="M7 21H3v-4"/>
+                    <line x1="8" y1="12" x2="16" y2="12" stroke-width="2.5"/>
+                  </svg>
                   可打开扫码窗口
                 </div>
               </div>
@@ -1057,17 +1069,23 @@ onMounted(() => {
 .detail-info span { color: #666; }
 .red-price { color: #f56c6c; font-weight: 500; }
 
-/* 扫码按钮 */
-.scan-btn {
-  flex-shrink: 0;
-  width: 48px; height: 48px;
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+/* 输入框内扫码按钮 */
+.scan-btn-inner {
+  width: 32px; height: 32px;
+  padding: 0;
+  background: transparent;
   border: none;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.4);
+  color: #1890ff;
+  font-size: 20px;
+  transition: all 0.2s;
 }
-.scan-btn:hover {
-  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.5);
+.scan-btn-inner:hover {
+  color: #40a9ff;
+  background: rgba(24, 144, 255, 0.08);
+  transform: scale(1.1);
+}
+.scan-btn-inner:active {
+  transform: scale(0.95);
 }
 
 /* 扫码弹窗 */
