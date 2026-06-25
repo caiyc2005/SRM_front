@@ -604,7 +604,10 @@ async function handleGenerateDelivery(row) {
       await loadOrders()
       return
     }
-    ElMessage.error(result.message || '生成送货单失败')
+    ElMessageBox.alert(result.message || '生成送货单失败', '操作失败', {
+      type: 'error',
+      confirmButtonText: '知道了'
+    })
   } catch { /* 降级 */ }
 }
 
@@ -665,12 +668,15 @@ async function confirmDeliveryWithQty() {
       return
     }
 
-    // API 返回错误时弹窗保持打开，将错误信息中的明细ID替换为订单编号
+    // API 返回错误时弹窗提示
     let errMsg = result.message || '生成送货单失败'
     validItems.forEach(item => {
       errMsg = errMsg.replace(item.orderDetailID, item.orderCode)
     })
-    ElMessage.error(errMsg)
+    ElMessageBox.alert(errMsg, '操作失败', {
+      type: 'error',
+      confirmButtonText: '知道了'
+    })
   } catch {
     ElMessage.error('生成送货单失败，后端不可用')
   }
