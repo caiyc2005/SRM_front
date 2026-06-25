@@ -94,6 +94,13 @@ function handleRowClick(row) {
               <el-table-column prop="unit" label="单位" width="70" align="center" />
               <el-table-column prop="unitPrice" label="单价" align="center" />
               <el-table-column prop="amount" label="金额" align="center" />
+              <el-table-column label="确认状态" width="85" align="center">
+                <template #default="scope">
+                  <el-tag :type="scope.row.isConfirm ? 'success' : 'warning'" size="small">
+                    {{ scope.row.isConfirm ? '已确认' : '未确认' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
             </el-table>
           </div>
         </template>

@@ -197,7 +197,8 @@ async function loadOrders() {
           unit: od.unit || '',
           qty: od.qty,
           unitPrice: od.unitPrice,
-          amount: od.amount
+          amount: od.amount,
+          isConfirm: od.isConfirm
         }))
       }))
       useApi.value = true
