@@ -93,7 +93,7 @@ async function loadDeliveries() {
             noteCode: item.noteCode,
             orderCode: dd.orderCode || '',
             supplierName: item.supplierName || '',
-            status: item.status ? '1' : '0',
+            status: String(item.status ?? 0),
             materialCode: dd.materialCode || '',
             materialName: dd.materialName || '',
             spec: dd.spec || '',
@@ -125,11 +125,11 @@ function handleReset() {
 }
 
 function getStatusText(status) {
-  return status === '1' ? '已收货' : '未收货'
+  return status === '2' ? '已收货' : status === '1' ? '已发货' : '未发货'
 }
 
 function getStatusTag(status) {
-  return status === '1' ? 'success' : 'warning'
+  return status === '2' ? 'success' : status === '1' ? 'primary' : 'warning'
 }
 
 // ============ 生命周期 ============

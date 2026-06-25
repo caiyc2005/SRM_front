@@ -769,9 +769,17 @@ watch(() => route.path, () => {
             <el-input-number
               v-model="deliveryQtyItems[$index].deliveryQty"
               :min="0"
-              :max="row.availableQty"
               size="small"
               style="width: 120px"
+              @change="() => {
+                const max = row.availableQty
+                if (deliveryQtyItems[$index].deliveryQty > max) {
+                  ElMessageBox.confirm(`送货数量不能超过可发数量 ${max}，已自动重置`, '超出可发数量', {
+                    confirmButtonText: '知道了', type: 'warning', showCancelButton: false
+                  })
+                  deliveryQtyItems[$index].deliveryQty = max
+                }
+              }"
             />
           </template>
         </el-table-column>

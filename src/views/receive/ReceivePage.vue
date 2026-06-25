@@ -12,7 +12,6 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import AppFilter from '@/components/AppFilter.vue'
 import AppPagination from '@/components/AppPagination.vue'
 import Logout from '@/components/Logout.vue'
-import { getStatusText, getStatusTag } from '@/utils/orderUtils'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 
 // ==================== API ====================
@@ -91,7 +90,7 @@ async function handleSearch() {
         supplierCode: item.supplierCode || '',
         expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
         createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
-        status: item.status ? '1' : '0',
+        status: String(item.status ?? 0),
         materials: (item.details || []).map((dd, i) => ({
           index: i + 1,
           orderCode: dd.orderCode || '',
@@ -356,10 +355,17 @@ const pendingFilterFields = [
   { key: 'keyword', label: '关键字', type: 'input', width: 300, placeholder: '订单号 / 送货单号' }
 ]
 
-// 显示已发货(status=3)或待发货(status=2，已有送货单)的待收料订单
+// 显示未收货的送货单
 const pendingReceiveOrders = computed(() => {
-  return allOrders.value.filter(o => ['2', '3'].includes(o.status))
+  return allOrders.value.filter(o => o.status !== '2')
 })
+
+function getDeliveryStatusText(status) {
+  return status === '2' ? '已收货' : status === '1' ? '已发货' : '未发货'
+}
+function getDeliveryStatusTag(status) {
+  return status === '2' ? 'success' : status === '1' ? 'primary' : 'warning'
+}
 
 const filteredOrders = computed(() => {
   let list = pendingReceiveOrders.value
@@ -414,7 +420,7 @@ async function loadPendingOrders() {
     const dRes = await fetch(`${API_DELIVERY}/GetDeliveryNote`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ page: 1, pageSize: 999 })
+      body: JSON.stringify({ page: 1, pageSize: 999, isReceived: false })
     })
     const dText = await dRes.text()
     const dResult = dText ? JSON.parse(dText) : {}
@@ -426,7 +432,7 @@ async function loadPendingOrders() {
         supplierID: item.supplierID || '',
         supplierCode: item.supplierCode || '',
         supplierName: item.supplierName || '',
-        status: item.status ? '4' : '3',
+        status: String(item.status ?? 0),
         materialCount: item.details?.length || 0,
         totalAmount: (item.details || []).reduce((s, dd) => s + (dd.amount || 0), 0).toFixed(2),
         createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
@@ -928,7 +934,7 @@ onMounted(() => {
                       <div class="detail-info">
                         <div><span>订单编号：</span><b>{{ row.orderCode }}</b></div>
                         <div><span>供应商：</span><b>{{ row.supplierName }}</b></div>
-                        <div><span>订单状态：</span><b>{{ getStatusText(row.status) }}</b></div>
+                        <div><span>订单状态：</span><b>{{ getDeliveryStatusText(row.status) }}</b></div>
                         <div><span>总金额：</span><b class="red-price">¥{{ row.totalAmount }}</b></div>
                         <div><span>送货单号：</span><b style="color: #1890ff">{{ row.noteCode || '—' }}</b></div>
                         <div><span>创建时间：</span><b>{{ row.createTime }}</b></div>
@@ -959,7 +965,7 @@ onMounted(() => {
                 <el-table-column prop="materialCount" label="物料种数" align="center" />
                 <el-table-column label="订单状态" width="100" align="center">
                   <template #default="{ row }">
-                    <el-tag :type="getStatusTag(row.status)" size="small">{{ getStatusText(row.status) }}</el-tag>
+                    <el-tag :type="getDeliveryStatusTag(row.status)" size="small">{{ getDeliveryStatusText(row.status) }}</el-tag>
                   </template>
                 </el-table-column>
                 <!-- <el-table-column label="操作" width="120" align="center">

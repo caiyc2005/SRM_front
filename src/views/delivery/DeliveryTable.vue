@@ -22,7 +22,7 @@ function handleRowClick(row, _column, event) {
 }
 
 function getStatusText(status) {
-  return status === '1' ? '已收货' : '未收货'
+  return status === '2' ? '已收货' : status === '1' ? '已发货' : '未发货'
 }
 
 /** 下载条形码为 PNG 图片 */

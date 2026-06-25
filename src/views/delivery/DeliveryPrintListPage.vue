@@ -103,7 +103,7 @@ async function loadDeliveries() {
         supplierId: item.supplierID || '',
         supplierCode: item.supplierCode || '',
         supplierName: item.supplierName || '',
-        status: item.status ? '1' : '0',
+        status: String(item.status ?? 0),
         materialCount: item.details?.length || 0,
         expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
         createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
