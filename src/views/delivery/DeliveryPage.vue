@@ -48,8 +48,9 @@ const total = ref(0)
 // 筛选字段配置
 const deliveryStatusOptions = [
   { label: '全部', value: 'all' },
-  { label: '未收货', value: '0' },
-  { label: '已收货', value: '1' }
+  { label: '未发货', value: '0' },
+  { label: '已发货', value: '1' },
+  { label: '已收货', value: '2' }
 ]
 
 // 当前用户角色
@@ -65,7 +66,7 @@ const deliveryFilterFields = computed(() => {
   if (!isSupplier) {
     fields.push({ key: 'supplierId', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'supplierName', valueKey: 'supplierID' })
   }
-  fields.push({ key: 'status', label: '收货状态', type: 'select', width: 180, options: deliveryStatusOptions })
+  fields.push({ key: 'status', label: '货物状态', type: 'select', width: 180, options: deliveryStatusOptions })
   return fields
 })
 
@@ -85,7 +86,7 @@ async function loadDeliveries() {
         noteCode: query.noteCode || undefined,
         orderCode: query.orderCode || undefined,//把orderCode字段传给后端
         supplierId: query.supplierId || undefined,
-        status: query.status && query.status !== 'all' ? (query.status === '1') : undefined,
+        status: query.status && query.status !== 'all' ? Number(query.status) : undefined,
         page: query.pageNum,
         pageSize: query.pageSize
       })

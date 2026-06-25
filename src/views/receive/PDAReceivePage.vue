@@ -113,7 +113,7 @@ async function loadPendingOrders() {
           orderCode: item.orderCode || '',
           supplierName: item.supplierName || '',
           materialCount: item.details?.length || 0,
-          status: item.status ? '1' : '0'
+          status: String(item.status ?? 0)
         }))
     }
   } catch { /* 降级 */ }
@@ -208,7 +208,7 @@ async function handleSearch() {
         supplierCode: item.supplierCode || '',
         expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
         createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
-        status: item.status ? '1' : '0',
+        status: String(item.status ?? 0),
         materials: (item.details || []).map((dd, i) => ({
           index: i + 1,
           materialCode: dd.materialCode,
@@ -243,13 +243,68 @@ function handleClearSearch() {
   submitted.value = false
 }
 
+// ==================== 数量超限警告弹窗 ====================
+function handleQtyOverLimit(val, index) {
+  const item = receiveFormItems.value[index]
+  if (!item || val == null) return
+  if (Number(val) > item.remaining) {
+    ElMessageBox.confirm(
+      `<div style="text-align: center;">
+        <div style="margin-bottom: 12px; color: #e6a23c;">
+          <span style="font-size: 26px;">⚠️</span>
+          <span style="font-size: 16px; font-weight: 600; vertical-align: middle; margin-left: 4px;">收料数量超出剩余应收</span>
+        </div>
+        <div style="font-size: 14px; color: #606266; margin-bottom: 16px;">
+          物料「${item.materialName}」的实收数量超出剩余应收数量
+        </div>
+        <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 12px;">
+          <div>
+            <div style="font-size: 12px; color: #909399;">剩余应收</div>
+            <div style="font-size: 28px; font-weight: 700; color: #1890ff;">${item.remaining}</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: #909399;">本次实收</div>
+            <div style="font-size: 28px; font-weight: 700; color: #f56c6c;">${Number(val)}</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: #909399;">超出</div>
+            <div style="font-size: 28px; font-weight: 700; color: #e6a23c;">+${Number(val) - item.remaining}</div>
+          </div>
+        </div>
+        <div style="font-size: 13px; color: #909399;">已自动恢复为最大可收数量</div>
+      </div>`,
+      '数量超限警告',
+      {
+        dangerouslyUseHTMLString: true,
+        type: 'warning',
+        confirmButtonText: '知道了',
+        showCancelButton: false
+      }
+    ).then(() => {
+      receiveFormItems.value[index].receivedQty = item.remaining
+    }).catch(() => {
+      receiveFormItems.value[index].receivedQty = item.remaining
+    })
+  }
+}
+
 // ==================== 数量更新 ====================
 function updateQty(index, value) {
-  receiveFormItems.value[index].receivedQty = value
-  const id = receiveFormItems.value[index].materialCode
-  if (fieldErrors.value[id]) {
+  const item = receiveFormItems.value[index]
+  if (!item) return
+  const numVal = Number(value) || 0
+
+  // 检测超限 → 弹窗警告并复位
+  if (numVal > item.remaining) {
+    handleQtyOverLimit(numVal, index)
+    return
+  }
+
+  receiveFormItems.value[index].receivedQty = numVal
+  const materialCode = item.materialCode
+  if (fieldErrors.value[materialCode]) {
     const newErrors = { ...fieldErrors.value }
-    delete newErrors[id]
+    delete newErrors[materialCode]
     fieldErrors.value = newErrors
   }
 }
@@ -565,8 +620,8 @@ onMounted(() => {
         <div class="card">
           <div class="card-title">
             送货单信息
-            <span class="tag" :class="foundDelivery.status === '1' ? 'tag-green' : 'tag-orange'">
-              {{ foundDelivery.status === '1' ? '已收货' : '未收货' }}
+            <span class="tag" :class="foundDelivery.status === '2' ? 'tag-green' : foundDelivery.status === '1' ? 'tag-blue' : 'tag-orange'">
+              {{ foundDelivery.status === '2' ? '已收货' : foundDelivery.status === '1' ? '已发货' : '未发货' }}
             </span>
           </div>
           <div class="card-body">
@@ -651,7 +706,7 @@ onMounted(() => {
                     :max="item.remaining"
                     :disabled="submitted"
                     @input="updateQty(index, Number($event.target.value) || 0)"
-                    @blur="updateQty(index, Math.min(item.remaining, Math.max(0, Number(item.receivedQty) || 0)))"
+                    @blur="updateQty(index, Number(item.receivedQty) || 0)"
                   />
                   <button
                     class="qty-btn"
@@ -697,8 +752,8 @@ onMounted(() => {
             </div>
             <div class="detail-card__numbers">
               <span>{{ order.supplierName }}</span>
-              <span :style="{ color: order.status === '1' ? '#1f7b5b' : '#c97a1a' }">
-                {{ order.status === '1' ? '已收货' : '未收货' }}
+              <span :style="{ color: order.status === '2' ? '#1f7b5b' : order.status === '1' ? '#1890ff' : '#c97a1a' }">
+                {{ order.status === '2' ? '已收货' : order.status === '1' ? '已发货' : '未发货' }}
               </span>
             </div>
           </div>
@@ -983,6 +1038,12 @@ onMounted(() => {
   background: #f0faf6;
   color: #1f7b5b;
   border: 1px solid #b7e3d4;
+}
+
+.tag-blue {
+  background: #ecf5ff;
+  color: #1890ff;
+  border: 1px solid #b3d8ff;
 }
 
 .tag-orange {

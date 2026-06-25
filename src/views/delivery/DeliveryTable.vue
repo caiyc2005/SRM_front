@@ -150,14 +150,14 @@ function downloadQrCode() {
 	      <el-table-column prop="supplierName" label="供应商名称" min-width="140" align="center" />
       <el-table-column label="收货状态" width="90" align="center">
         <template #default="scope">
-          <el-tag :type="scope.row.status === '0' ? 'warning' : 'success'" size="small">
+          <el-tag :type="scope.row.status === '0' ? 'warning' : scope.row.status === '1' ? 'primary' : 'success'" size="small">
             {{ getStatusText(scope.row.status) }}
           </el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="materialCount" label="物料种类" width="80" align="center" />
+      <el-table-column prop="receiveTime" label="实际发货时间" min-width="150" align="center" />
       <el-table-column prop="expectDate" label="预计送达" min-width="120" align="center" />
-      <el-table-column prop="createTime" label="创建时间" min-width="150" align="center" />
 
       <!-- 操作列 -->
       <el-table-column label="操作" :width="hideDelete ? 80 : 140" align="center">

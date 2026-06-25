@@ -57,7 +57,7 @@ async function loadShipOrders() {
         orderCode: item.orderCode || item.noteCode,
         supplierID: item.supplierID || '',
         supplierName: item.supplierName || '',
-        status: String(item.orderStatus ?? (item.status ? 3 : 2)),
+        status: String(item.orderStatus ?? (item.status === 2 ? 4 : item.status === 1 ? 3 : 2)),
         materialCount: item.details?.length || 0,
         totalAmount: item.totalAmount
           ? Number(item.totalAmount).toFixed(2)

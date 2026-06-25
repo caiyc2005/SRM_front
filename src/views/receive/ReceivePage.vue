@@ -115,6 +115,51 @@ async function handleSearch() {
   } catch { /* 降级 */ }
 }
 
+/** 实收数量输入变化时检测超限 */
+function handleQtyOverLimit(val, index) {
+  const item = receiveFormItems.value[index]
+  if (!item || val == null) return
+  if (Number(val) > item.remaining) {
+    ElMessageBox.confirm(
+      `<div style="text-align: center;">
+        <div style="margin-bottom: 12px; color: #e6a23c;">
+          <span style="font-size: 26px;">⚠️</span>
+          <span style="font-size: 16px; font-weight: 600; vertical-align: middle; margin-left: 4px;">收料数量超出剩余应收</span>
+        </div>
+        <div style="font-size: 14px; color: #606266; margin-bottom: 16px;">
+          物料「${item.materialName}」的实收数量超出剩余应收数量
+        </div>
+        <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 12px;">
+          <div>
+            <div style="font-size: 12px; color: #909399;">剩余应收</div>
+            <div style="font-size: 28px; font-weight: 700; color: #1890ff;">${item.remaining}</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: #909399;">本次实收</div>
+            <div style="font-size: 28px; font-weight: 700; color: #f56c6c;">${Number(val)}</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: #909399;">超出</div>
+            <div style="font-size: 28px; font-weight: 700; color: #e6a23c;">+${Number(val) - item.remaining}</div>
+          </div>
+        </div>
+        <div style="font-size: 13px; color: #909399;">已自动恢复为最大可收数量</div>
+      </div>`,
+      '数量超限警告',
+      {
+        dangerouslyUseHTMLString: true,
+        type: 'warning',
+        confirmButtonText: '知道了',
+        showCancelButton: false
+      }
+    ).then(() => {
+      receiveFormItems.value[index].receivedQty = item.remaining
+    }).catch(() => {
+      receiveFormItems.value[index].receivedQty = item.remaining
+    })
+  }
+}
+
 /** 确认收货 */
 async function handleConfirmReceive() {
   if (!foundDelivery.value) return
@@ -145,7 +190,9 @@ async function handleConfirmReceive() {
       return
     }
     if (Number(item.receivedQty) > item.remaining) {
-      ElMessage.warning(`物料「${item.materialName}」的剩余应收数量为 ${item.remaining}，本次实收不能超过此数量`)
+      // 输入时已弹窗警告并复位，这里再兜底一次
+      item.receivedQty = item.remaining
+      ElMessage.warning(`物料「${item.materialName}」的实收数量已自动修正为最大可收数量 ${item.remaining}`)
       return
     }
   }
@@ -768,9 +815,9 @@ onMounted(() => {
                       <el-input-number
                         v-model="receiveFormItems[$index].receivedQty"
                         :min="0"
-                        :max="row.remaining"
                         size="small"
                         style="width: 130px"
+                        @change="(val) => handleQtyOverLimit(val, $index)"
                       />
                     </template>
                   </el-table-column>
