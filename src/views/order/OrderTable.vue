@@ -3,36 +3,64 @@ import { ref } from 'vue'
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
 import AppPagination from '@/components/AppPagination.vue'
 
-defineProps({
+const props = defineProps({
   tableData: { type: Array, required: true },
   total: { type: Number, required: true },
   query: { type: Object, required: true },
   actionType: { type: String, default: 'all' },
   hideConfirm: { type: Boolean, default: false },
   hideStatus: { type: Boolean, default: false },
-  detailMode: { type: Boolean, default: false }
+  detailMode: { type: Boolean, default: false },
+  detailAction: { type: String, default: 'confirm' }
 })
 
-const emit = defineEmits(['pageChange', 'confirm', 'confirmDetail', 'generateDelivery'])
+const emit = defineEmits(['pageChange', 'confirm', 'confirmDetail', 'generateDelivery', 'batchDelivery'])
 
 const tableRef = ref(null)
+const selectedRows = ref([])
+
+function onSelectionChange(rows) {
+  if (props.detailAction !== 'delivery') return
+  selectedRows.value = rows
+}
+
+function handleBatchDelivery() {
+  if (selectedRows.value.length === 0) return
+  emit('batchDelivery', [...selectedRows.value])
+}
 
 function handleRowClick(row) {
-  if (tableRef.value) {
-    tableRef.value.toggleRowExpansion(row)
+  if (!tableRef.value) return
+  // 待发货模式：点击行切换选中
+  if (props.detailAction === 'delivery') {
+    tableRef.value.toggleRowSelection(row)
+    return
   }
+  tableRef.value.toggleRowExpansion(row)
 }
+
+defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
 </script>
 
 <template>
   <div class="card">
     <div class="table-header">
-      <span>{{ detailMode ? '确认明细' : '订单列表' }}</span>
-      <span>共 {{ total }} 条记录</span>
+      <span>{{ detailMode ? (detailAction === 'delivery' ? '待发货明细' : '确认明细') : '订单列表' }}</span>
+      <span>
+        <el-button v-if="detailMode && detailAction === 'delivery'" type="success" size="small"
+          :disabled="selectedRows.length === 0" @click="handleBatchDelivery">
+          生成送货单 ({{ selectedRows.length }})
+        </el-button>
+        <span style="margin-left: 10px;">共 {{ total }} 条记录</span>
+      </span>
     </div>
 
-    <!-- ========== 待确认模式：明细级别表格（自适应列宽） ========== -->
-    <el-table v-if="detailMode" :data="tableData" row-key="orderDetailID" border size="small" style="width: 100%" show-overflow-tooltip>
+    <!-- ========== 明细级别表格 ========== -->
+    <el-table v-if="detailMode" ref="tableRef" :data="tableData" row-key="orderDetailID" border size="small"
+      style="width: 100%" show-overflow-tooltip
+      @row-click="handleRowClick"
+      @selection-change="onSelectionChange">
+      <el-table-column v-if="detailAction === 'delivery'" type="selection" width="40" align="center" />
       <el-table-column prop="orderCode" label="订单编号" min-width="120" align="center" />
       <el-table-column prop="supplierName" label="供应商名称" min-width="110" align="center" />
       <el-table-column prop="materialCode" label="物料编码" min-width="100" align="center" />
@@ -40,9 +68,9 @@ function handleRowClick(row) {
       <el-table-column prop="spec" label="规格" min-width="80" align="center" />
       <el-table-column prop="qty" label="采购数量" width="80" align="center" />
       <el-table-column prop="unit" label="单位" width="60" align="center" />
-      <el-table-column prop="unitPrice" label="单价" width="90" align="center" />
-      <el-table-column prop="amount" label="金额" width="100" align="center" />
-      <el-table-column prop="createTime" label="创建时间" min-width="145" align="center" />
+      <!-- <el-table-column prop="unitPrice" label="单价" width="90" align="center" /> -->
+      <!-- <el-table-column prop="amount" label="金额" width="100" align="center" /> -->
+      <!-- <el-table-column prop="createTime" label="创建时间" min-width="145" align="center" /> -->
       <el-table-column label="确认状态" width="90" align="center">
         <template #default="scope">
           <el-tag :type="scope.row.detailStatus === '1' ? 'success' : 'warning'" size="small">
@@ -50,7 +78,7 @@ function handleRowClick(row) {
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="75" align="center" fixed="right">
+      <el-table-column v-if="detailAction !== 'delivery'" label="操作" width="75" align="center" fixed="right">
         <template #default="scope">
           <el-button type="primary" link size="small" :disabled="scope.row.detailStatus === '1'"
             @click="emit('confirmDetail', scope.row)">

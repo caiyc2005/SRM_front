@@ -54,6 +54,8 @@ const total = ref(0)
 
 const useApi = ref(false)
 
+const orderTableRef = ref(null)
+
 const route = useRoute()
 
 // 判断当前模式
@@ -165,13 +167,50 @@ async function loadOrders() {
       return
     }
 
-    // ===== 非待确认模式：调用订单级别接口 =====
+    // ===== 待生成送货单模式：调用已确认订单接口 =====
+    if (isPendingDeliveryMode()) {
+      const params = {}
+      if (query.orderCode) params.orderCode = query.orderCode
+      if (query.supplierID) params.supplierID = query.supplierID
+      params.pageIndex = query.pageNum
+      params.pageSize = query.pageSize
+
+      const res = await fetch(`${API_BASE}/GetConfirmedOrders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify(params)
+      })
+      const text = await res.text()
+      const result = text ? JSON.parse(text) : {}
+
+      if (result.success && result.data) {
+        const d = result.data
+        tableData.value = (d.list || []).map(od => ({
+          orderID: od.orderID,
+          orderCode: od.orderCode,
+          supplierName: od.supplierName,
+          createTime: od.orderCreateTime ? od.orderCreateTime.replace('T', ' ').slice(0, 16) : '',
+          orderDetailID: od.orderDetailID || od.detailID || od.id || '',
+          detailStatus: od.isConfirm === true ? '1' : '0',
+          materialCode: od.materialCode,
+          materialName: od.materialName,
+          spec: od.spec || '',
+          qty: od.qty,
+          unit: od.unit || '',
+          unitPrice: od.unitPrice,
+          amount: od.amount
+        }))
+        total.value = d.total
+        useApi.value = true
+      }
+      return
+    }
+
+    // ===== 订单查询模式：调用订单级别接口 =====
     const params = new URLSearchParams()
     if (query.orderCode) params.append('orderCode', query.orderCode)
     if (query.supplierID) params.append('supplierID', query.supplierID)
-    if (isPendingDeliveryMode()) {
-      params.append('status', '1')
-    } else if (query.status) {
+    if (query.status) {
       params.append('status', query.status)
     }
     params.append('pageIndex', String(query.pageNum))
@@ -512,6 +551,46 @@ async function handleConfirmDetail(row) {
   }
 }
 
+async function handleBatchDelivery(rows) {
+  if (!rows || rows.length === 0) return
+  const orderCodes = [...new Set(rows.map(r => r.orderCode))].join('、')
+  try {
+    await ElMessageBox.confirm(
+      `确认为选中的 ${rows.length} 条明细（订单 ${orderCodes}）生成送货单吗？`,
+      '批量生成送货单',
+      { type: 'warning', confirmButtonText: '确认生成' }
+    )
+  } catch { return }
+
+  try {
+    let userInfo = { userID: '', userName: '' }
+    try { userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}') } catch {}
+    const token = localStorage.getItem('token')
+
+    const res = await fetch('/api/Delivery/CreateDeliveryNote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({
+        orderDetailIDs: rows.map(r => r.orderDetailID),
+        createByID: userInfo.userID || '',
+        createByName: userInfo.userName || ''
+      })
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.code === 200 || result.success) {
+      ElMessage.success(`送货单生成成功，共 ${rows.length} 条明细`)
+      if (orderTableRef.value) orderTableRef.value.clearSelection()
+      await loadOrders()
+      return
+    }
+    ElMessage.error(result.message || '生成送货单失败')
+  } catch {
+    ElMessage.error('生成送货单失败，后端不可用')
+  }
+}
+
 async function handleGenerateDelivery(row) {
   try {
     await ElMessageBox.confirm(
@@ -573,7 +652,7 @@ watch(() => route.path, () => {
 
     <div class="main">
       <div class="header">
-        <h3>{{ isPendingMode() ? '确认采购明细' : '采购订单管理' }}</h3>
+        <h3>{{ isPendingMode() ? '确认采购明细' : isPendingDeliveryMode() ? '生成送货单' : '采购订单管理' }}</h3>
         <Logout />
       </div>
 
@@ -588,15 +667,18 @@ watch(() => route.path, () => {
         </AppFilter>
 
         <OrderTable
+          ref="orderTableRef"
           :table-data="tableData"
           :total="total"
           :query="query"
           action-type="all"
           :hide-status="isPendingMode() || isPendingDeliveryMode()"
-          :detail-mode="isPendingMode()"
+          :detail-mode="isPendingMode() || isPendingDeliveryMode()"
+          :detail-action="isPendingDeliveryMode() ? 'delivery' : 'confirm'"
           @confirm="handleConfirm"
           @confirm-detail="handleConfirmDetail"
           @generate-delivery="handleGenerateDelivery"
+          @batch-delivery="handleBatchDelivery"
         />
       </div>
     </div>
