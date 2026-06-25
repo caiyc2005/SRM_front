@@ -31,8 +31,9 @@ function handleBatchDelivery() {
 
 function handleRowClick(row) {
   if (!tableRef.value) return
-  // 待发货模式：点击行切换选中
+  // 待发货模式：点击行切换选中（已生成送货单的不可选中）
   if (props.detailAction === 'delivery') {
+    if (row.detailStatus === '2') return
     tableRef.value.toggleRowSelection(row)
     return
   }
