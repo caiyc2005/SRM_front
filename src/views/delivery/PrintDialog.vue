@@ -63,13 +63,13 @@ async function handleExport() {
         <table class="print-table">
           <thead>
             <tr>
-              <th width="40">序号</th>
-              <th width="100">物料编码</th>
+              <th>序号</th>
+              <th>物料编码</th>
               <th>物料名称</th>
-              <th width="110">规格型号</th>
-              <th width="50">单位</th>
-              <th width="80">送货数量</th>
-              <th width="100">备注</th>
+              <th>规格型号</th>
+              <th>单位</th>
+              <th>送货数量</th>
+              <th>备注</th>
             </tr>
           </thead>
           <tbody>

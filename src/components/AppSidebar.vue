@@ -125,6 +125,7 @@ const menuItems = [
     children: [
       { key: 'order-pending-delivery', label: '生成送货单', path: '/order/pending-delivery' },
       { key: 'delivery', label: '送货单查询', path: '/delivery' },
+      { key: 'delivery-details', label: '送货明细查询', path: '/delivery/details' },
       { key: 'delivery-print', label: '打印送货单', path: '/delivery/printlist' },
     ]
   },

@@ -83,7 +83,7 @@ function downloadQrCode() {
       <span>共 {{ total }} 条记录</span>
     </div>
 
-    <el-table ref="tableRef" :data="tableData" row-key="id" border style="width: 100%" @row-click="handleRowClick">
+    <el-table ref="tableRef" :data="tableData" row-key="id" border size="small" style="width: 100%" show-overflow-tooltip @row-click="handleRowClick">
       <!-- 展开详情 -->
       <el-table-column type="expand">
         <template #default="props">
@@ -91,12 +91,10 @@ function downloadQrCode() {
             <div class="detail-title">送货单基础信息</div>
             <div class="detail-info">
               <div><span>送货单号：</span><b>{{ props.row.noteCode }}</b></div>
-              <div><span>对应订单号：</span><b>{{ props.row.orderCode }}</b></div>
               <div><span>供应商：</span><b>{{ props.row.supplierName }}</b></div>
               <div><span>收货状态：</span><b>{{ getStatusText(props.row.status) }}</b></div>
               <div><span>创建时间：</span><b>{{ props.row.createTime }}</b></div>
               <div><span>预计送达：</span><b>{{ props.row.expectDate }}</b></div>
-              <div><span>收货时间：</span><b>{{ props.row.receiveTime || '-' }}</b></div>
               <div><span>操作员：</span><b>{{ props.row.operator || '-' }}</b></div>
             </div>
 
@@ -115,7 +113,7 @@ function downloadQrCode() {
         </template>
       </el-table-column>
 
-      <el-table-column prop="noteCode" label="送货单号" width="180" align="center" resizable="false" />
+      <el-table-column prop="noteCode" label="送货单号" min-width="160" align="center" />
       
       
       
@@ -135,7 +133,7 @@ function downloadQrCode() {
 
 
       <!-- QR 二维码（备用）-->
-      <el-table-column label="二维码" width="80" align="center" resizable="false">
+      <el-table-column label="二维码" width="70" align="center">
         <template #default="scope">
           <QrCodeDisplay
             :value="scope.row.noteCode"
@@ -149,21 +147,20 @@ function downloadQrCode() {
       
 
 
-      <el-table-column prop="orderCode" label="对应订单号" width="180" align="center" resizable="false" />
-      <el-table-column prop="supplierName" label="供应商名称" min-width="200" align="center" resizable="false" />
-      <el-table-column label="收货状态" width="100" align="center" resizable="false">
+	      <el-table-column prop="supplierName" label="供应商名称" min-width="140" align="center" />
+      <el-table-column label="收货状态" width="90" align="center">
         <template #default="scope">
           <el-tag :type="scope.row.status === '0' ? 'warning' : 'success'" size="small">
             {{ getStatusText(scope.row.status) }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="materialCount" label="物料种类" width="90" align="center" resizable="false" />
-      <el-table-column prop="expectDate" label="预计送达" width="120" align="center" resizable="false" />
-      <el-table-column prop="createTime" label="创建时间" width="160" align="center" resizable="false" />
+      <el-table-column prop="materialCount" label="物料种类" width="80" align="center" />
+      <el-table-column prop="expectDate" label="预计送达" min-width="120" align="center" />
+      <el-table-column prop="createTime" label="创建时间" min-width="150" align="center" />
 
       <!-- 操作列 -->
-      <el-table-column label="操作" :width="hideDelete ? 80 : 180" align="center" resizable="false">
+      <el-table-column label="操作" :width="hideDelete ? 80 : 140" align="center">
         <template #default="scope">
           <el-button type="primary" link size="small" @click="emit('print', scope.row)">
             打印

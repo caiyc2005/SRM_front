@@ -12,6 +12,7 @@ import InventoryPage from '@/views/basic/InventoryPage.vue'
 import WarehousePage from '@/views/basic/WarehousePage.vue'
 import CreateOrderPage from '@/views/order/CreateOrderPage.vue'
 import DeliveryPrintListPage from '@/views/delivery/DeliveryPrintListPage.vue'
+import DeliveryDetailPage from '@/views/delivery/DeliveryDetailPage.vue'
 import PDAReceivePage from '@/views/receive/PDAReceivePage.vue'
 
 /**
@@ -64,6 +65,12 @@ const routes = [
     name: 'Delivery',
     component: DeliveryPage,
     meta: { roles: ['仓管员', '供应商', '管理员', 'admin'], title: '送货单查询' }
+  },
+  {
+    path: '/delivery/details',
+    name: 'DeliveryDetails',
+    component: DeliveryDetailPage,
+    meta: { roles: ['采购员', '仓管员', '管理员', 'admin', 'supplier'], title: '送货明细查询' }
   },
   {
     path: '/delivery/printlist',
