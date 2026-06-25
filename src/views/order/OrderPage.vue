@@ -558,7 +558,7 @@ async function handleBatchDelivery(rows) {
   const validRows = rows.filter(r => r.detailStatus !== '2')
   const skippedCount = rows.length - validRows.length
   if (skippedCount > 0) {
-    ElMessage.warning(`${skippedCount} 条明细已生成送货单已排除`)
+    ElMessage.warning(`${skippedCount} 条明细已生成送货单，已排除`)
   }
   if (validRows.length === 0) {
     ElMessage.warning('选中的明细都已生成送货单，无需重复操作')
@@ -566,42 +566,8 @@ async function handleBatchDelivery(rows) {
     return
   }
 
-  const orderCodes = [...new Set(validRows.map(r => r.orderCode))].join('、')
-  try {
-    await ElMessageBox.confirm(
-      `确认为选中的 ${validRows.length} 条明细（订单 ${orderCodes}）生成送货单吗？`,
-      '批量生成送货单',
-      { type: 'warning', confirmButtonText: '确认生成' }
-    )
-  } catch { return }
-
-  try {
-    let userInfo = { userID: '', userName: '' }
-    try { userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}') } catch {}
-    const token = localStorage.getItem('token')
-
-    const res = await fetch('/api/Delivery/CreateDeliveryNote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-      body: JSON.stringify({
-        orderDetailIDs: validRows.map(r => r.orderDetailID),
-        createByID: userInfo.userID || '',
-        createByName: userInfo.userName || ''
-      })
-    })
-    const text = await res.text()
-    const result = text ? JSON.parse(text) : {}
-
-    if (result.code === 200 || result.success) {
-      ElMessage.success(`送货单生成成功，共 ${validRows.length} 条明细`)
-      if (orderTableRef.value) orderTableRef.value.clearSelection()
-      await loadOrders()
-      return
-    }
-    ElMessage.error(result.message || '生成送货单失败')
-  } catch {
-    ElMessage.error('生成送货单失败，后端不可用')
-  }
+  // 打开送货数量输入弹窗
+  openDeliveryQtyDialog(validRows)
 }
 
 async function handleGenerateDelivery(row) {
@@ -638,6 +604,68 @@ async function handleGenerateDelivery(row) {
     }
     ElMessage.error(result.message || '生成送货单失败')
   } catch { /* 降级 */ }
+}
+
+// ============ 送货数量弹窗 ============
+const deliveryQtyVisible = ref(false)
+const deliveryQtyItems = ref([])
+
+function openDeliveryQtyDialog(rows) {
+  deliveryQtyItems.value = rows.map(r => ({
+    ...r,
+    deliveryQty: r.qty // 默认等于采购数量
+  }))
+  deliveryQtyVisible.value = true
+}
+
+async function confirmDeliveryWithQty() {
+  const items = deliveryQtyItems.value
+
+  // 校验每条明细的送货数量是否超出采购数量
+  const overItems = items.filter(r => r.deliveryQty > r.qty)
+  if (overItems.length > 0) {
+    ElMessage.warning(`物料「${overItems[0].materialName}」的送货数量（${overItems[0].deliveryQty}）超出采购数量（${overItems[0].qty}），请调整`)
+    return
+  }
+
+  const validItems = items.filter(r => r.deliveryQty > 0)
+  if (validItems.length === 0) {
+    ElMessage.warning('请填写至少一条明细的送货数量')
+    return
+  }
+
+  deliveryQtyVisible.value = false
+
+  try {
+    let userInfo = { userID: '', userName: '' }
+    try { userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}') } catch {}
+    const token = localStorage.getItem('token')
+
+    const res = await fetch('/api/Delivery/CreateDeliveryNote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({
+        items: validItems.map(r => ({
+          orderDetailID: r.orderDetailID,
+          deliveryQty: r.deliveryQty
+        })),
+        createByID: userInfo.userID || '',
+        createByName: userInfo.userName || ''
+      })
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.code === 200 || result.success) {
+      ElMessage.success(`送货单生成成功，共 ${validItems.length} 条明细`)
+      if (orderTableRef.value) orderTableRef.value.clearSelection()
+      await loadOrders()
+      return
+    }
+    ElMessage.error(result.message || '生成送货单失败')
+  } catch {
+    ElMessage.error('生成送货单失败，后端不可用')
+  }
 }
 
 // ============ 生命周期 ============
@@ -706,6 +734,40 @@ watch(() => route.path, () => {
       @remove-material="removeMaterial"
       @submit="submitCreateOrder"
     />
+
+    <!-- 送货数量输入弹窗 -->
+    <el-dialog v-model="deliveryQtyVisible" title="填写送货数量" width="800px" align-center>
+      <div style="margin-bottom: 12px; font-size: 13px; color: #666;">
+        送货数量默认为采购数量，可修改为小于采购数量以支持分批送货。
+      </div>
+      <el-table :data="deliveryQtyItems" border size="small" style="width: 100%">
+        <el-table-column prop="orderCode" label="订单编号" min-width="120" align="center" />
+        <el-table-column prop="materialCode" label="物料编码" min-width="100" align="center" />
+        <el-table-column prop="materialName" label="物料名称" min-width="120" align="center" />
+        <el-table-column prop="spec" label="规格" min-width="80" align="center" />
+        <el-table-column prop="unit" label="单位" width="60" align="center" />
+        <el-table-column label="采购数量" width="90" align="center">
+          <template #default="{ row }">
+            <span>{{ row.qty }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="送货数量" width="120" align="center">
+          <template #default="{ row, $index }">
+            <el-input-number
+              v-model="deliveryQtyItems[$index].deliveryQty"
+              :min="0"
+              :max="row.qty"
+              size="small"
+              style="width: 100px"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="deliveryQtyVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmDeliveryWithQty">确认生成送货单</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
