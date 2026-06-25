@@ -410,60 +410,37 @@ async function loadPendingOrders() {
     const token = localStorage.getItem('token')
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
 
-    // 1️⃣ 先拉送货单列表，建立 orderID → 送货单号 的映射
-    const deliveryMap = new Map()
-    try {
-      const dRes = await fetch(`${API_DELIVERY}/GetDeliveryNote`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ page: 1, pageSize: 999 })
-      })
-      const dText = await dRes.text()
-      const dResult = dText ? JSON.parse(dText) : {}
-      if (dResult.code === 200 && dResult.data?.items?.length) {
-        for (const item of dResult.data.items) {
-          if (item.orderID && item.noteCode) {
-            deliveryMap.set(item.orderID, item.noteCode)
-          }
-        }
-      }
-    } catch { /* 送货单接口不可用，不影响主流程 */ }
-
-    // 2️⃣ 拉已发货 + 待发货订单列表（客户端筛选 status=2/3）
-    const res = await fetch(`${API_ORDERS}/GetOrdersByList`, {
+    // 直接使用送货单数据作为待收料列表
+    const dRes = await fetch(`${API_DELIVERY}/GetDeliveryNote`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers
-      },
-      body: JSON.stringify({ pageIndex: 1, pageSize: 999 })
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ page: 1, pageSize: 999 })
     })
-    const text = await res.text()
-    const result = text ? JSON.parse(text) : {}
+    const dText = await dRes.text()
+    const dResult = dText ? JSON.parse(dText) : {}
 
-    if (result.success && result.data?.list?.length) {
-      allOrders.value = result.data.list.map(o => ({
-        orderID: o.orderID,
-        orderCode: o.orderCode,
-        supplierID: o.supplierID,
-        supplierCode: o.supplierCode,
-        supplierName: o.supplierName,
-        status: String(o.status),
-        materialCount: o.orderDetails?.length || 0,
-        totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
-        createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
-        // 送货单号优先从送货单接口获取，其次从订单接口获取
-        deliveryNo: deliveryMap.get(o.orderID) || o.deliveryNo || '',
-        noteCode: o.noteCode || '',
-        materials: (o.orderDetails || []).map((od, i) => ({
+    if (dResult.code === 200 && dResult.data?.items?.length) {
+      allOrders.value = dResult.data.items.map(item => ({
+        orderID: item.noteID,
+        orderCode: item.details?.[0]?.orderCode || '',
+        supplierID: item.supplierID || '',
+        supplierCode: item.supplierCode || '',
+        supplierName: item.supplierName || '',
+        status: item.status ? '4' : '3',
+        materialCount: item.details?.length || 0,
+        totalAmount: (item.details || []).reduce((s, dd) => s + (dd.amount || 0), 0).toFixed(2),
+        createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
+        deliveryNo: item.noteCode || '',
+        noteCode: item.noteCode || '',
+        materials: (item.details || []).map((dd, i) => ({
           index: i + 1,
-          materialCode: od.materialCode,
-          materialName: od.materialName,
-          spec: od.spec || '',
-          unit: od.unit || '',
-          qty: od.qty,
-          unitPrice: od.unitPrice,
-          amount: od.amount
+          materialCode: dd.materialCode || '',
+          materialName: dd.materialName || '',
+          spec: dd.spec || '',
+          unit: dd.unit || '',
+          qty: dd.quantity || 0,
+          unitPrice: dd.unitPrice || 0,
+          amount: dd.amount || 0
         }))
       }))
       return
@@ -970,13 +947,16 @@ onMounted(() => {
                   </template>
                 </el-table-column>
 
-                <el-table-column prop="supplierName" label="供应商" min-width="160" />
-                <el-table-column prop="noteCode" label="送货单号" width="180" align="center">
+                <el-table-column type="index" label="序号" width="60" align="center" />
+                <el-table-column prop="noteCode" label="送货单号" min-width="160" align="center">
                   <template #default="{ row }">
                     <span v-if="row.noteCode" style="color: #1890ff;">{{ row.noteCode }}</span>
                     <span v-else style="color: #999;">—</span>
                   </template>
                 </el-table-column>
+                <el-table-column prop="orderCode" label="订单编号" min-width="150" align="center" />
+                <el-table-column prop="supplierName" label="供应商" min-width="160" align="center" />
+                <el-table-column prop="materialCount" label="物料种数" align="center" />
                 <el-table-column label="订单状态" width="100" align="center">
                   <template #default="{ row }">
                     <el-tag :type="getStatusTag(row.status)" size="small">{{ getStatusText(row.status) }}</el-tag>
