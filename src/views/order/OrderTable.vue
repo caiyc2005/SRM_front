@@ -71,16 +71,16 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
       <!-- <el-table-column prop="unitPrice" label="单价" width="90" align="center" /> -->
       <!-- <el-table-column prop="amount" label="金额" width="100" align="center" /> -->
       <!-- <el-table-column prop="createTime" label="创建时间" min-width="145" align="center" /> -->
-      <el-table-column label="确认状态" width="90" align="center">
+      <el-table-column label="确认状态" width="105" align="center">
         <template #default="scope">
-          <el-tag :type="scope.row.detailStatus === '1' ? 'success' : 'warning'" size="small">
-            {{ scope.row.detailStatus === '1' ? '已确认' : '未确认' }}
+          <el-tag :type="scope.row.detailStatus === '0' ? 'warning' : scope.row.detailStatus === '1' ? 'success' : 'info'" size="small">
+            {{ scope.row.detailStatus === '0' ? '待确认' : scope.row.detailStatus === '1' ? '已确认' : '已生成送货单' }}
           </el-tag>
         </template>
       </el-table-column>
       <el-table-column v-if="detailAction !== 'delivery'" label="操作" width="75" align="center" fixed="right">
         <template #default="scope">
-          <el-button type="primary" link size="small" :disabled="scope.row.detailStatus === '1'"
+          <el-button type="primary" link size="small" :disabled="scope.row.detailStatus !== '0'"
             @click="emit('confirmDetail', scope.row)">
             确认
           </el-button>

@@ -60,7 +60,7 @@ async function fetchPendingCount() {
     if (result.success && result.data) {
       // 前端统计未确认的明细数
       const list = result.data.list || []
-      pendingCount.value = list.filter(d => !d.isConfirm).length
+      pendingCount.value = list.filter(d => d.isConfirm === 0).length
     }
   } catch { /* 静默失败 */ }
 }
