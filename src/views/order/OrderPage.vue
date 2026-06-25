@@ -196,6 +196,8 @@ async function loadOrders() {
           materialName: od.materialName,
           spec: od.spec || '',
           qty: od.qty,
+          deliveredQty: od.deliveredQty || 0,
+          availableQty: od.availableQty ?? od.qty,
           unit: od.unit || '',
           unitPrice: od.unitPrice,
           amount: od.amount
@@ -613,7 +615,7 @@ const deliveryQtyItems = ref([])
 function openDeliveryQtyDialog(rows) {
   deliveryQtyItems.value = rows.map(r => ({
     ...r,
-    deliveryQty: r.qty // 默认等于采购数量
+    deliveryQty: r.availableQty // 默认等于可发货最大数量
   }))
   deliveryQtyVisible.value = true
 }
@@ -621,10 +623,10 @@ function openDeliveryQtyDialog(rows) {
 async function confirmDeliveryWithQty() {
   const items = deliveryQtyItems.value
 
-  // 校验每条明细的送货数量是否超出采购数量
-  const overItems = items.filter(r => r.deliveryQty > r.qty)
+  // 校验每条明细的送货数量是否超出可发数量
+  const overItems = items.filter(r => r.deliveryQty > r.availableQty)
   if (overItems.length > 0) {
-    ElMessage.warning(`物料「${overItems[0].materialName}」的送货数量（${overItems[0].deliveryQty}）超出采购数量（${overItems[0].qty}），请调整`)
+    ElMessage.warning(`物料「${overItems[0].materialName}」的送货数量（${overItems[0].deliveryQty}）超出可发数量（${overItems[0].availableQty}），请调整`)
     return
   }
 
@@ -633,8 +635,6 @@ async function confirmDeliveryWithQty() {
     ElMessage.warning('请填写至少一条明细的送货数量')
     return
   }
-
-  deliveryQtyVisible.value = false
 
   try {
     let userInfo = { userID: '', userName: '' }
@@ -647,6 +647,7 @@ async function confirmDeliveryWithQty() {
       body: JSON.stringify({
         items: validItems.map(r => ({
           orderDetailID: r.orderDetailID,
+          orderCode: r.orderCode,
           deliveryQty: r.deliveryQty
         })),
         createByID: userInfo.userID || '',
@@ -657,12 +658,19 @@ async function confirmDeliveryWithQty() {
     const result = text ? JSON.parse(text) : {}
 
     if (result.code === 200 || result.success) {
+      deliveryQtyVisible.value = false
       ElMessage.success(`送货单生成成功，共 ${validItems.length} 条明细`)
       if (orderTableRef.value) orderTableRef.value.clearSelection()
       await loadOrders()
       return
     }
-    ElMessage.error(result.message || '生成送货单失败')
+
+    // API 返回错误时弹窗保持打开，将错误信息中的明细ID替换为订单编号
+    let errMsg = result.message || '生成送货单失败'
+    validItems.forEach(item => {
+      errMsg = errMsg.replace(item.orderDetailID, item.orderCode)
+    })
+    ElMessage.error(errMsg)
   } catch {
     ElMessage.error('生成送货单失败，后端不可用')
   }
@@ -738,27 +746,32 @@ watch(() => route.path, () => {
     <!-- 送货数量输入弹窗 -->
     <el-dialog v-model="deliveryQtyVisible" title="填写送货数量" width="800px" align-center>
       <div style="margin-bottom: 12px; font-size: 13px; color: #666;">
-        送货数量默认为采购数量，可修改为小于采购数量以支持分批送货。
+        送货数量默认等于可发货最大数量，可修改为更小值支持分批送货。
       </div>
       <el-table :data="deliveryQtyItems" border size="small" style="width: 100%">
-        <el-table-column prop="orderCode" label="订单编号" min-width="120" align="center" />
-        <el-table-column prop="materialCode" label="物料编码" min-width="100" align="center" />
-        <el-table-column prop="materialName" label="物料名称" min-width="120" align="center" />
-        <el-table-column prop="spec" label="规格" min-width="80" align="center" />
-        <el-table-column prop="unit" label="单位" width="60" align="center" />
-        <el-table-column label="采购数量" width="90" align="center">
+        <el-table-column prop="orderCode" label="订单编号" align="center" />
+        <el-table-column prop="materialCode" label="物料编码" align="center" />
+        <el-table-column prop="materialName" label="物料名称" align="center" />
+        <el-table-column prop="spec" label="规格" align="center" />
+        <el-table-column prop="unit" label="单位" align="center" />
+        <el-table-column label="数量" align="center">
           <template #default="{ row }">
-            <span>{{ row.qty }}</span>
+            <span>{{ row.deliveredQty }}/{{ row.qty }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="送货数量" width="120" align="center">
+        <el-table-column label="可发数量" align="center">
+          <template #default="{ row }">
+            <span style="color: #1890ff;">{{ row.availableQty }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="送货数量" width="140" align="center" class-name="delivery-qty-col">
           <template #default="{ row, $index }">
             <el-input-number
               v-model="deliveryQtyItems[$index].deliveryQty"
               :min="0"
-              :max="row.qty"
+              :max="row.availableQty"
               size="small"
-              style="width: 100px"
+              style="width: 120px"
             />
           </template>
         </el-table-column>
@@ -776,4 +789,11 @@ watch(() => route.path, () => {
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .header { height: 60px; background: #fff; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
 .content { padding: 20px; flex: 1; overflow-y: auto; }
+</style>
+<style>
+.delivery-qty-col .el-input-number .el-input__inner {
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  color: #e60000 !important;
+}
 </style>
