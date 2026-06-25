@@ -53,12 +53,14 @@ async function fetchPendingCount() {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({ status: '0', pageIndex: 1, pageSize: 1 })
+      body: JSON.stringify({ status: '0', pageIndex: 1, pageSize: 999 })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
     if (result.success && result.data) {
-      pendingCount.value = result.data.total || 0
+      // 前端统计未确认的明细数
+      const list = result.data.list || []
+      pendingCount.value = list.filter(d => !d.isConfirm).length
     }
   } catch { /* 静默失败 */ }
 }
@@ -111,9 +113,9 @@ const menuItems = [
     key: 'order',
     label: '📋 采购订单管理',
     children: [
-      { key: 'order-query', label: '订单明细一览表', path: '/order/query' },
+      { key: 'order-query', label: '订单一览表', path: '/order/query' },
       { key: 'order-create', label: '创建采购单', path: '/order/create' },
-      { key: 'order-pending', label: '确认采购明细', path: '/order/pending' },
+      { key: 'order-pending', label: '采购明细确认', path: '/order/pending' },
       
     ]
   },

@@ -44,7 +44,7 @@ const query = reactive({
   orderCode: '',
   supplierID: '',
   status: '',
-  confirmStatus: '',
+  confirmStatus: '0',
   pageNum: 1,
   pageSize: 10
 })
@@ -121,24 +121,23 @@ async function loadOrders() {
 
     // ===== 待确认模式：调用明细级别接口 =====
     if (isPendingMode()) {
-      const params = new URLSearchParams()
-      if (query.orderCode) params.append('orderCode', query.orderCode)
-      if (query.supplierID) params.append('supplierID', query.supplierID)
-      if (query.confirmStatus) params.append('status', query.confirmStatus)
-      params.append('pageIndex', String(query.pageNum))
-      params.append('pageSize', String(query.pageSize))
+      const params = {}
+      if (query.orderCode) params.orderCode = query.orderCode
+      if (query.supplierID) params.supplierID = query.supplierID
+      params.pageIndex = query.pageNum
+      params.pageSize = query.pageSize
 
       const res = await fetch(`${API_BASE}/GetOrdersDetailsByList`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify(Object.fromEntries(params))
+        body: JSON.stringify(params)
       })
       const text = await res.text()
       const result = text ? JSON.parse(text) : {}
 
       if (result.success && result.data) {
         const d = result.data
-        tableData.value = (d.list || []).map(od => ({
+        let list = (d.list || []).map(od => ({
           orderID: od.orderID,
           orderCode: od.orderCode,
           supplierName: od.supplierName,
@@ -153,7 +152,14 @@ async function loadOrders() {
           unitPrice: od.unitPrice,
           amount: od.amount
         }))
-        total.value = d.total
+        // 确认状态前端过滤
+        if (query.confirmStatus === '1') {
+          list = list.filter(item => item.detailStatus === '1')
+        } else if (query.confirmStatus === '0') {
+          list = list.filter(item => item.detailStatus === '0')
+        }
+        tableData.value = list
+        total.value = list.length
         useApi.value = true
       }
       return
@@ -220,7 +226,7 @@ function handleReset() {
   query.orderCode = ''
   query.supplierID = ''
   query.status = ''
-  query.confirmStatus = ''
+  query.confirmStatus = '0'
   query.pageNum = 1
   loadOrders()
 }

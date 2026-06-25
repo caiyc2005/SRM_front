@@ -27,7 +27,7 @@ function handleRowClick(row) {
 <template>
   <div class="card">
     <div class="table-header">
-      <span>{{ detailMode ? '待确认明细' : '订单列表' }}</span>
+      <span>{{ detailMode ? '确认明细' : '订单列表' }}</span>
       <span>共 {{ total }} 条记录</span>
     </div>
 
