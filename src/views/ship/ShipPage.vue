@@ -226,7 +226,7 @@ function disabledDate(time) {
                 <div class="detail-content">
                   <div class="detail-info">
                     <div><span>订单编号：</span><b>{{ row.orderCode }}</b></div>
-                    <div><span>供应商：</span><b>{{ row.supplierName }}</b></div>
+                    <div><span>供应商名称：</span><b>{{ row.supplierName }}</b></div>
                     <div><span>订单状态：</span><b>{{ getStatusText(row.status) }}</b></div>
                     <div><span>总金额：</span><b class="red-price">¥{{ row.totalAmount }}</b></div>
                     <div><span>创建时间：</span><b>{{ row.createTime }}</b></div>
@@ -248,14 +248,14 @@ function disabledDate(time) {
               </template>
             </el-table-column>
 
-            <el-table-column prop="orderCode" label="订单编号" width="160" align="center" />
-            <el-table-column prop="supplierName" label="供应商" min-width="160" />
             <el-table-column prop="noteCode" label="送货单号" width="180" align="center">
               <template #default="{ row }">
                 <span v-if="row.noteCode" style="color: #1890ff;">{{ row.noteCode }}</span>
                 <span v-else style="color: #999;">—</span>
               </template>
             </el-table-column>
+            <el-table-column prop="supplierName" label="供应商名称" min-width="160" />
+            
             <el-table-column label="订单状态" width="120" align="center">
               <template #default="{ row }">
                 <el-tag :type="getStatusTag(row.status)" size="small">
@@ -297,14 +297,24 @@ function disabledDate(time) {
     <el-dialog
       v-model="shipDialogVisible"
       title="发货确认"
-      width="420px"
+      width="800px"
       align-center
     >
       <div class="ship-dialog-body">
         <div class="ship-dialog-info">
-          <div>订单编号：<b>{{ currentShipRow?.orderCode }}</b></div>
-          <div>供应商：<b>{{ currentShipRow?.supplierName }}</b></div>
+          <div>供应商名称：<b>{{ currentShipRow?.supplierName }}</b></div>
         </div>
+
+        <div class="section-title">物料明细</div>
+        <el-table :data="currentShipRow?.materials || []" size="small" border style="width: 100%">
+          <el-table-column prop="index" label="序号" width="60" align="center" />
+          <el-table-column prop="materialCode" label="物料编码" width="120" align="center" />
+          <el-table-column prop="materialName" label="物料名称" min-width="140" />
+          <el-table-column prop="spec" label="规格" width="110" align="center" />
+          <el-table-column prop="unit" label="单位" width="70" align="center" />
+          <el-table-column prop="qty" label="数量" width="80" align="center" />
+        </el-table>
+
         <div class="ship-dialog-date">
           <span>预计送达时间：</span>
           <el-date-picker
@@ -340,6 +350,9 @@ function disabledDate(time) {
 .detail-info span { color: #666; }
 .red-price { color: #f56c6c; font-weight: 500; }
 
+.section-title {
+  font-size: 14px; font-weight: 500; margin: 8px 0; color: #333;
+}
 .ship-dialog-body {
   display: flex; flex-direction: column; gap: 16px; padding: 10px 0;
 }
