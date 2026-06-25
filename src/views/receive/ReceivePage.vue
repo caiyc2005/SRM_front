@@ -94,6 +94,7 @@ async function handleSearch() {
         status: item.status ? '1' : '0',
         materials: (item.details || []).map((dd, i) => ({
           index: i + 1,
+          orderCode: dd.orderCode || '',
           materialCode: dd.materialCode,
           materialName: dd.materialName || '',
           spec: dd.spec || '',
@@ -731,17 +732,8 @@ onMounted(() => {
                   <el-descriptions-item label="送货单号">
                     <b style="color: #1890ff">{{ foundDelivery.noteCode }}</b>
                   </el-descriptions-item>
-                  <el-descriptions-item label="采购单号">
-                    {{ foundDelivery.orderCode }}
-                  </el-descriptions-item>
                   <el-descriptions-item label="供应商">
                     {{ foundDelivery.supplierName }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="供应商编码">
-                    {{ foundDelivery.supplierCode }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="预计送达">
-                    {{ foundDelivery.expectDate }}
                   </el-descriptions-item>
                   <el-descriptions-item label="创建时间">
                     {{ foundDelivery.createTime }}
@@ -768,6 +760,7 @@ onMounted(() => {
 
                 <el-table :data="receiveFormItems" stripe border style="width: 100%">
                   <el-table-column type="index" label="序号" width="60" align="center" />
+                  <el-table-column prop="orderCode" label="采购单号" width="160" align="center" />
                   <el-table-column prop="materialCode" label="物料编码" width="130" align="center" />
                   <el-table-column prop="materialName" label="物料名称" min-width="140" />
                   <el-table-column prop="spec" label="规格" width="110" align="center" />
@@ -881,6 +874,11 @@ onMounted(() => {
                         <div class="detail-title">收料明细</div>
                         <el-table :data="row.items" size="small" border style="width: 100%">
                           <el-table-column type="index" label="序号" width="60" align="center" />
+                          <el-table-column label="采购单号" width="160" align="center">
+                            <template #default>
+                              {{ row.orderCode }}
+                            </template>
+                          </el-table-column>
                           <el-table-column prop="materialCode" label="物料编码" width="120" align="center" />
                           <el-table-column prop="materialName" label="物料名称" min-width="140" />
                           <el-table-column prop="spec" label="规格" width="110" align="center" />
@@ -904,7 +902,6 @@ onMounted(() => {
 
                   <el-table-column prop="recordCode" label="收料单号" width="180" align="center" />
                   <el-table-column prop="noteCode" label="送货单号" width="180" align="center" />
-                  <el-table-column prop="orderCode" label="采购单号" width="160" align="center" />
                   <el-table-column prop="supplierName" label="供应商" min-width="160" />
                   <el-table-column prop="totalPlanQty" label="计划总数" width="100" align="center" />
                   <el-table-column prop="totalReceivedQty" label="实收总数" width="100" align="center" />
@@ -973,7 +970,6 @@ onMounted(() => {
                   </template>
                 </el-table-column>
 
-                <el-table-column prop="orderCode" label="订单编号" width="160" align="center" />
                 <el-table-column prop="supplierName" label="供应商" min-width="160" />
                 <el-table-column prop="noteCode" label="送货单号" width="180" align="center">
                   <template #default="{ row }">

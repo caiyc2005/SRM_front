@@ -91,7 +91,7 @@ async function loadDeliveries() {
           flatList.push({
             index: ++index,
             noteCode: item.noteCode,
-            orderCode: item.orderCode || dd.orderCode || '',
+            orderCode: dd.orderCode || '',
             supplierName: item.supplierName || '',
             status: item.status ? '1' : '0'
           })
