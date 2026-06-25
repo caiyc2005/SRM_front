@@ -60,7 +60,8 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
       style="width: 100%" show-overflow-tooltip
       @row-click="handleRowClick"
       @selection-change="onSelectionChange">
-      <el-table-column v-if="detailAction === 'delivery'" type="selection" width="40" align="center" />
+      <el-table-column v-if="detailAction === 'delivery'" type="selection" width="40" align="center"
+        :selectable="(row) => row.detailStatus !== '2'" />
       <el-table-column prop="orderCode" label="订单编号" min-width="120" align="center" />
       <el-table-column prop="supplierName" label="供应商名称" min-width="110" align="center" />
       <el-table-column prop="materialCode" label="物料编码" min-width="100" align="center" />

@@ -146,7 +146,7 @@ async function loadOrders() {
           createTime: od.orderCreateTime ? od.orderCreateTime.replace('T', ' ').slice(0, 16) : '',
           orderDetailID: od.orderDetailID || od.detailID || od.id || '',
           detailStatus: String(od.isConfirm ?? 0),
-          materialCode: od.materialCode,
+          materialCode: od.materialCode || od.materialID || '',
           materialName: od.materialName,
           spec: od.spec || '',
           qty: od.qty,
@@ -192,7 +192,7 @@ async function loadOrders() {
           createTime: od.orderCreateTime ? od.orderCreateTime.replace('T', ' ').slice(0, 16) : '',
           orderDetailID: od.orderDetailID || od.detailID || od.id || '',
           detailStatus: String(od.isConfirm ?? 0),
-          materialCode: od.materialCode,
+          materialCode: od.materialCode || od.materialID || '',
           materialName: od.materialName,
           spec: od.spec || '',
           qty: od.qty,
@@ -236,7 +236,7 @@ async function loadOrders() {
         noteCode: o.noteCode || '',
         materials: (o.orderDetails || []).map((od, i) => ({
           index: i + 1,
-          materialCode: od.materialCode,
+          materialCode: od.materialCode || od.materialID || '',
           materialName: od.materialName,
           spec: od.spec || '',
           unit: od.unit || '',
@@ -494,7 +494,7 @@ async function submitCreateOrder() {
 async function handleConfirm(row) {
   try {
     await ElMessageBox.confirm(
-      `确认要将订单 ${row.orderCode} 标记为「已确认」状态吗？确认后将不可撤回。`,
+      `确认要将订单 ${row.orderCode} 【整个订单】标记为「已确认」状态吗？确认后将不可撤回。`,
       '订单确认操作',
       { type: 'warning' }
     )
@@ -553,10 +553,23 @@ async function handleConfirmDetail(row) {
 
 async function handleBatchDelivery(rows) {
   if (!rows || rows.length === 0) return
-  const orderCodes = [...new Set(rows.map(r => r.orderCode))].join('、')
+
+  // 过滤掉已生成送货单的明细（isConfirm === 2）
+  const validRows = rows.filter(r => r.detailStatus !== '2')
+  const skippedCount = rows.length - validRows.length
+  if (skippedCount > 0) {
+    ElMessage.warning(`${skippedCount} 条明细已生成送货单已排除`)
+  }
+  if (validRows.length === 0) {
+    ElMessage.warning('选中的明细都已生成送货单，无需重复操作')
+    if (orderTableRef.value) orderTableRef.value.clearSelection()
+    return
+  }
+
+  const orderCodes = [...new Set(validRows.map(r => r.orderCode))].join('、')
   try {
     await ElMessageBox.confirm(
-      `确认为选中的 ${rows.length} 条明细（订单 ${orderCodes}）生成送货单吗？`,
+      `确认为选中的 ${validRows.length} 条明细（订单 ${orderCodes}）生成送货单吗？`,
       '批量生成送货单',
       { type: 'warning', confirmButtonText: '确认生成' }
     )
@@ -571,7 +584,7 @@ async function handleBatchDelivery(rows) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
       body: JSON.stringify({
-        orderDetailIDs: rows.map(r => r.orderDetailID),
+        orderDetailIDs: validRows.map(r => r.orderDetailID),
         createByID: userInfo.userID || '',
         createByName: userInfo.userName || ''
       })
@@ -580,7 +593,7 @@ async function handleBatchDelivery(rows) {
     const result = text ? JSON.parse(text) : {}
 
     if (result.code === 200 || result.success) {
-      ElMessage.success(`送货单生成成功，共 ${rows.length} 条明细`)
+      ElMessage.success(`送货单生成成功，共 ${validRows.length} 条明细`)
       if (orderTableRef.value) orderTableRef.value.clearSelection()
       await loadOrders()
       return
