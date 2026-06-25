@@ -53,12 +53,14 @@ async function fetchPendingCount() {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({ status: '0', pageIndex: 1, pageSize: 1 })
+      body: JSON.stringify({ status: '0', pageIndex: 1, pageSize: 999 })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
     if (result.success && result.data) {
-      pendingCount.value = result.data.total || 0
+      // 统计所有待确认订单的明细条数总和
+      const list = result.data.list || []
+      pendingCount.value = list.reduce((sum, o) => sum + (o.orderDetails?.length || 0), 0)
     }
   } catch { /* 静默失败 */ }
 }
