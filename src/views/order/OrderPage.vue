@@ -116,8 +116,13 @@ async function loadOrders() {
     params.append('pageSize', String(query.pageSize))
 
     const token = localStorage.getItem('token')
-    const res = await fetch(`${API_BASE}/GetOrdersByList?${params}`, {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    const res = await fetch(`${API_BASE}/GetOrdersByList`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(Object.fromEntries(params))
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
