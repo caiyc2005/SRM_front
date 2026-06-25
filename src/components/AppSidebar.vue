@@ -47,8 +47,13 @@ async function fetchPendingCount() {
   if (!canViewPendingOrder.value) return
   try {
     const token = localStorage.getItem('token')
-    const res = await fetch('/api/Orders/GetOrdersByList?status=0&pageIndex=1&pageSize=1', {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    const res = await fetch('/api/Orders/GetOrdersByList', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ status: '0', pageIndex: 1, pageSize: 1 })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
@@ -106,9 +111,9 @@ const menuItems = [
     key: 'order',
     label: '📋 采购订单管理',
     children: [
-      { key: 'order-query', label: '订单一览表', path: '/order/query' },
+      { key: 'order-query', label: '订单明细一览表', path: '/order/query' },
       { key: 'order-create', label: '创建采购单', path: '/order/create' },
-      { key: 'order-pending', label: '确认采购单', path: '/order/pending' },
+      { key: 'order-pending', label: '确认采购明细', path: '/order/pending' },
       
     ]
   },

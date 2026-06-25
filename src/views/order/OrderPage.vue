@@ -129,6 +129,34 @@ async function loadOrders() {
 
     if (result.success && result.data) {
       const d = result.data
+
+      // ===== 待确认模式：展平为明细列表，每行一个物料明细 =====
+      if (isPendingMode()) {
+        const flatList = []
+        ;(d.list || []).forEach(o => {
+          ;(o.orderDetails || []).forEach(od => {
+            flatList.push({
+              orderID: o.orderID,
+              orderCode: o.orderCode,
+              supplierName: o.supplierName,
+              createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
+              orderDetailID: od.orderDetailID || od.detailID || od.id || '',
+              materialCode: od.materialCode,
+              materialName: od.materialName,
+              spec: od.spec || '',
+              qty: od.qty,
+              unit: od.unit || '',
+              unitPrice: od.unitPrice,
+              amount: od.amount
+            })
+          })
+        })
+        tableData.value = flatList
+        total.value = flatList.length
+        useApi.value = true
+        return
+      }
+
       total.value = d.total
       tableData.value = (d.list || []).map(o => ({
         ...o,
@@ -148,9 +176,6 @@ async function loadOrders() {
           amount: od.amount
         }))
       }))
-      if (isPendingMode()) {
-        tableData.value = tableData.value.filter(item => item.status === '0')
-      }
       useApi.value = true
       return
     }
@@ -425,6 +450,36 @@ async function handleConfirm(row) {
   } catch { /* 降级 */ }
 }
 
+async function handleConfirmDetail(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确认要确认物料「${row.materialName}」（订单 ${row.orderCode}）吗？确认后将不可撤回。`,
+      '物料确认操作',
+      { type: 'warning' }
+    )
+  } catch { return }
+
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_BASE}/ConfirmOrderDetail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ orderDetailID: row.orderDetailID })
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.success) {
+      ElMessage.success('物料确认成功')
+      await loadOrders()
+      return
+    }
+    ElMessage.error(result.message || '确认失败')
+  } catch {
+    ElMessage.error('确认失败，后端不可用')
+  }
+}
+
 async function handleGenerateDelivery(row) {
   try {
     await ElMessageBox.confirm(
@@ -486,7 +541,7 @@ watch(() => route.path, () => {
 
     <div class="main">
       <div class="header">
-        <h3>采购订单管理</h3>
+        <h3>{{ isPendingMode() ? '确认采购明细' : '采购订单管理' }}</h3>
         <Logout />
       </div>
 
@@ -506,7 +561,9 @@ watch(() => route.path, () => {
           :query="query"
           action-type="all"
           :hide-status="isPendingMode() || isPendingDeliveryMode()"
+          :detail-mode="isPendingMode()"
           @confirm="handleConfirm"
+          @confirm-detail="handleConfirmDetail"
           @generate-delivery="handleGenerateDelivery"
         />
       </div>

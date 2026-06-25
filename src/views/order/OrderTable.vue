@@ -9,10 +9,11 @@ defineProps({
   query: { type: Object, required: true },
   actionType: { type: String, default: 'all' },
   hideConfirm: { type: Boolean, default: false },
-  hideStatus: { type: Boolean, default: false }
+  hideStatus: { type: Boolean, default: false },
+  detailMode: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['pageChange', 'confirm', 'generateDelivery'])
+const emit = defineEmits(['pageChange', 'confirm', 'confirmDetail', 'generateDelivery'])
 
 const tableRef = ref(null)
 
@@ -26,11 +27,34 @@ function handleRowClick(row) {
 <template>
   <div class="card">
     <div class="table-header">
-      <span>订单列表</span>
+      <span>{{ detailMode ? '待确认明细' : '订单列表' }}</span>
       <span>共 {{ total }} 条记录</span>
     </div>
 
+    <!-- ========== 待确认模式：明细级别表格（自适应列宽） ========== -->
+    <el-table v-if="detailMode" :data="tableData" row-key="orderDetailID" border size="small" style="width: 100%" show-overflow-tooltip>
+      <el-table-column prop="orderCode" label="订单编号" min-width="120" align="center" />
+      <el-table-column prop="supplierName" label="供应商名称" min-width="110" align="center" />
+      <el-table-column prop="materialCode" label="物料编码" min-width="100" align="center" />
+      <el-table-column prop="materialName" label="物料名称" min-width="120" align="center" />
+      <el-table-column prop="spec" label="规格" min-width="80" align="center" />
+      <el-table-column prop="qty" label="采购数量" width="80" align="center" />
+      <el-table-column prop="unit" label="单位" width="60" align="center" />
+      <el-table-column prop="unitPrice" label="单价" width="90" align="center" />
+      <el-table-column prop="amount" label="金额" width="100" align="center" />
+      <el-table-column prop="createTime" label="创建时间" min-width="145" align="center" />
+      <el-table-column label="操作" width="75" align="center" fixed="right">
+        <template #default="scope">
+          <el-button type="primary" link size="small" @click="emit('confirmDetail', scope.row)">
+            确认
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- ========== 订单级别表格（非待确认模式） ========== -->
     <el-table
+      v-else
       ref="tableRef"
       :data="tableData"
       row-key="orderID"

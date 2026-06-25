@@ -429,7 +429,14 @@ async function loadPendingOrders() {
     } catch { /* 送货单接口不可用，不影响主流程 */ }
 
     // 2️⃣ 拉已发货 + 待发货订单列表（客户端筛选 status=2/3）
-    const res = await fetch(`${API_ORDERS}/GetOrdersByList?pageIndex=1&pageSize=999`, { headers })
+    const res = await fetch(`${API_ORDERS}/GetOrdersByList`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers
+      },
+      body: JSON.stringify({ pageIndex: 1, pageSize: 999 })
+    })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
 
