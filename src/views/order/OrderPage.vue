@@ -44,6 +44,7 @@ const query = reactive({
   orderCode: '',
   supplierID: '',
   status: '',
+  confirmStatus: '',
   pageNum: 1,
   pageSize: 10
 })
@@ -84,6 +85,19 @@ const orderFilterFields = computed(() => {
   if (!isPendingDeliveryMode() || !isSupplier) {
     fields.push({ key: 'supplierID', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'supplierName', valueKey: 'supplierID' })
   }
+  if (isPendingMode()) {
+    fields.push({
+      key: 'confirmStatus',
+      label: '确认状态',
+      type: 'select',
+      width: 140,
+      options: [
+        { label: '全部', value: '' },
+        { label: '未确认', value: '0' },
+        { label: '已确认', value: '1' }
+      ]
+    })
+  }
   if (!isPendingMode() && !isPendingDeliveryMode()) {
     fields.push({ key: 'status', label: '订单状态', type: 'select', width: 180, options: orderStatusOptions })
   }
@@ -102,12 +116,54 @@ const createForm = reactive({
 async function loadOrders() {
   // ========== 优先调后端 API ==========
   try {
+    const token = localStorage.getItem('token')
+    const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {}
+
+    // ===== 待确认模式：调用明细级别接口 =====
+    if (isPendingMode()) {
+      const params = new URLSearchParams()
+      if (query.orderCode) params.append('orderCode', query.orderCode)
+      if (query.supplierID) params.append('supplierID', query.supplierID)
+      if (query.confirmStatus) params.append('status', query.confirmStatus)
+      params.append('pageIndex', String(query.pageNum))
+      params.append('pageSize', String(query.pageSize))
+
+      const res = await fetch(`${API_BASE}/GetOrdersDetailsByList`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify(Object.fromEntries(params))
+      })
+      const text = await res.text()
+      const result = text ? JSON.parse(text) : {}
+
+      if (result.success && result.data) {
+        const d = result.data
+        tableData.value = (d.list || []).map(od => ({
+          orderID: od.orderID,
+          orderCode: od.orderCode,
+          supplierName: od.supplierName,
+          createTime: od.orderCreateTime ? od.orderCreateTime.replace('T', ' ').slice(0, 16) : '',
+          orderDetailID: od.orderDetailID || od.detailID || od.id || '',
+          detailStatus: od.isConfirm === true ? '1' : '0',
+          materialCode: od.materialCode,
+          materialName: od.materialName,
+          spec: od.spec || '',
+          qty: od.qty,
+          unit: od.unit || '',
+          unitPrice: od.unitPrice,
+          amount: od.amount
+        }))
+        total.value = d.total
+        useApi.value = true
+      }
+      return
+    }
+
+    // ===== 非待确认模式：调用订单级别接口 =====
     const params = new URLSearchParams()
     if (query.orderCode) params.append('orderCode', query.orderCode)
     if (query.supplierID) params.append('supplierID', query.supplierID)
-    if (isPendingMode()) {
-      params.append('status', '0')
-    } else if (isPendingDeliveryMode()) {
+    if (isPendingDeliveryMode()) {
       params.append('status', '1')
     } else if (query.status) {
       params.append('status', query.status)
@@ -115,13 +171,9 @@ async function loadOrders() {
     params.append('pageIndex', String(query.pageNum))
     params.append('pageSize', String(query.pageSize))
 
-    const token = localStorage.getItem('token')
     const res = await fetch(`${API_BASE}/GetOrdersByList`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify(Object.fromEntries(params))
     })
     const text = await res.text()
@@ -129,34 +181,6 @@ async function loadOrders() {
 
     if (result.success && result.data) {
       const d = result.data
-
-      // ===== 待确认模式：展平为明细列表，每行一个物料明细 =====
-      if (isPendingMode()) {
-        const flatList = []
-        ;(d.list || []).forEach(o => {
-          ;(o.orderDetails || []).forEach(od => {
-            flatList.push({
-              orderID: o.orderID,
-              orderCode: o.orderCode,
-              supplierName: o.supplierName,
-              createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
-              orderDetailID: od.orderDetailID || od.detailID || od.id || '',
-              materialCode: od.materialCode,
-              materialName: od.materialName,
-              spec: od.spec || '',
-              qty: od.qty,
-              unit: od.unit || '',
-              unitPrice: od.unitPrice,
-              amount: od.amount
-            })
-          })
-        })
-        tableData.value = flatList
-        total.value = flatList.length
-        useApi.value = true
-        return
-      }
-
       total.value = d.total
       tableData.value = (d.list || []).map(o => ({
         ...o,
@@ -195,6 +219,7 @@ function handleReset() {
   query.orderCode = ''
   query.supplierID = ''
   query.status = ''
+  query.confirmStatus = ''
   query.pageNum = 1
   loadOrders()
 }
