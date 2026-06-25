@@ -52,8 +52,9 @@ async function loadShipOrders() {
 
     if (result.code === 200 && result.data) {
       allOrders.value = (result.data.items || []).map(item => ({
-        orderID: item.orderID ,//|| item.noteID,
-        orderCode: item.orderCode ,//|| item.noteCode,
+        orderID: item.orderID,
+        noteID: item.noteID || '',
+        orderCode: item.orderCode || item.noteCode,
         supplierID: item.supplierID || '',
         supplierName: item.supplierName || '',
         status: String(item.orderStatus ?? (item.status ? 3 : 2)),
@@ -171,9 +172,8 @@ async function confirmShip() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
       body: JSON.stringify({
-        orderID: row.orderID,
-        supplierID: row.supplierID || '',
-        supplierName: row.supplierName || '',
+        noteID: row.noteID,
+        noteCode: row.noteCode,
         expectedDate: expectDate.value || undefined
       })
     })
