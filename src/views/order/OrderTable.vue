@@ -1,5 +1,8 @@
 <script setup>
 import { ref } from 'vue'
+const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]')
+const isSupplier = userRoles.some(r => r === 'supplier' || r === '供应商')
+
 import { getStatusText, getStatusTag } from '@/utils/orderUtils'
 import AppPagination from '@/components/AppPagination.vue'
 
@@ -64,7 +67,7 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
       <el-table-column v-if="detailAction === 'delivery'" type="selection" width="40" align="center"
         :selectable="(row) => row.detailStatus !== '2'" />
       <el-table-column prop="orderCode" label="订单编号" min-width="120" align="center" />
-      <el-table-column prop="supplierName" label="供应商名称" min-width="110" align="center" />
+      <el-table-column v-if="!isSupplier" prop="supplierName" label="供应商名称" min-width="110" align="center" />
       <el-table-column prop="materialCode" label="物料编码" min-width="100" align="center" />
       <el-table-column prop="materialName" label="物料名称" min-width="120" align="center" />
       <el-table-column prop="spec" label="规格" min-width="80" align="center" />
@@ -144,7 +147,7 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
       </el-table-column>
 
       <el-table-column prop="orderCode" label="订单编号" width="160" align="center" resizable="false" />
-      <el-table-column prop="supplierName" label="供应商名称" min-width="180" align="center" resizable="false" />
+      <el-table-column v-if="!isSupplier" prop="supplierName" label="供应商名称" min-width="180" align="center" resizable="false" />
 
       <el-table-column prop="materialCount" label="物料种类" width="90" align="center" resizable="false" />
       <el-table-column prop="totalAmount" label="总金额(元)" width="130" align="center" class-name="red-price" resizable="false" />

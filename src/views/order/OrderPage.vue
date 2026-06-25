@@ -684,9 +684,9 @@ async function confirmDeliveryWithQty() {
 
 // ============ 生命周期 ============
 onMounted(() => {
-  loadSuppliers()
+  if (!isSupplier) loadSuppliers()
   loadOrders()
-  loadMaterials()
+  if (!isSupplier) loadMaterials()
 })
 
 watch(
@@ -717,7 +717,7 @@ watch(() => route.path, () => {
             <el-button type="success" @click="handleExport">
               <el-icon><Download /></el-icon> 导出Excel
             </el-button>
-            <el-button type="primary" @click="openCreateDialog">创建采购订单</el-button>
+            <el-button v-if="!isSupplier" type="primary" @click="openCreateDialog">创建采购订单</el-button>
           </template>
         </AppFilter>
 
@@ -738,7 +738,7 @@ watch(() => route.path, () => {
       </div>
     </div>
 
-    <CreateOrderDialog
+    <CreateOrderDialog v-if="!isSupplier"
       :visible="createDialogVisible"
       :supplier-list="supplierList"
       :material-list="materialList"

@@ -135,7 +135,7 @@ function getStatusTag(status) {
 
 // ============ 生命周期 ============
 onMounted(() => {
-  loadSuppliers()
+  if (!isSupplier) loadSuppliers()
   loadDeliveries()
 })
 
@@ -173,7 +173,7 @@ watch(
             <el-table-column prop="index" label="序号" width="60" align="center" />
             <el-table-column prop="noteCode" label="送货单号" min-width="150" align="center" />
             <el-table-column prop="orderCode" label="采购单号" min-width="140" align="center" />
-            <el-table-column prop="supplierName" label="供应商" min-width="120" align="center" />
+            <el-table-column v-if="!isSupplier" prop="supplierName" label="供应商" min-width="120" align="center" />
             <el-table-column prop="materialCode" label="物料编码" min-width="110" align="center" />
             <el-table-column prop="materialName" label="物料名称" min-width="130" align="center" />
             <el-table-column prop="spec" label="规格" min-width="90" align="center" />

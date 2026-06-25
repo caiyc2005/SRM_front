@@ -14,6 +14,7 @@ import CreateOrderPage from '@/views/order/CreateOrderPage.vue'
 import DeliveryPrintListPage from '@/views/delivery/DeliveryPrintListPage.vue'
 import DeliveryDetailPage from '@/views/delivery/DeliveryDetailPage.vue'
 import PDAReceivePage from '@/views/receive/PDAReceivePage.vue'
+import SupplierUserPage from '@/views/supplier/SupplierUserPage.vue'
 
 /**
  * 角色-页面访问配置
@@ -89,6 +90,12 @@ const routes = [
     name: 'Supplier',
     component: SupplierPage,
     meta: { roles: ['采购员', '管理员', 'admin'], title: '供应商管理' }
+  },
+  {
+    path: '/supplier/users',
+    name: 'SupplierUsers',
+    component: SupplierUserPage,
+    meta: { roles: ['供应商', 'supplier', '采购员', '管理员', 'admin'], title: '供应商子账号管理' }
   },
   {
     path: '/receive',

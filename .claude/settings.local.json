@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(mkdir -p d:/SRM/frontend/src/views/user)",
-      "Bash(mkdir -p \"/d/SRM/frontend/src/views/basic\")"
+      "Bash(mkdir -p \"/d/SRM/frontend/src/views/basic\")",
+      "Bash(python -c ' *)",
+      "Bash(python -c \"open\\(r'd:/SRM/frontend/src/views/supplier/SupplierPage.vue', 'r', encoding='utf-8'\\).read\\(\\)\")",
+      "Bash(python d:/SRM/frontend/fix_supplier.py)",
+      "Bash(python)"
     ],
     "additionalDirectories": [
       "d:\\SRM\\frontend\\src\\views",

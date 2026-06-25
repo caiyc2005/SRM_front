@@ -53,11 +53,9 @@ async function handleExport() {
         <div class="print-title">送 货 单</div>
         <div class="print-base">
           <div>送货单号：{{ delivery.noteCode }}</div>
-          <div>对应订单号：{{ delivery.orderCode }}</div>
-          <div>供应商编码：{{ delivery.supplierCode }}</div>
-          <div>供应商名称：{{ delivery.supplierName }}</div>
-          <div>预计送达：{{ delivery.expectDate }}</div>
+          <div>供应商：{{ delivery.supplierCode }}-{{ delivery.supplierName }}</div>
           <div>创建时间：{{ delivery.createTime }}</div>
+          <div>预计送达：{{ delivery.expectDate }}</div>
         </div>
 
         <table class="print-table">

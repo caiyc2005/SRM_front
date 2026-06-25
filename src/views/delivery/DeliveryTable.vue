@@ -7,6 +7,9 @@ defineProps({
 })
 
 import { ref } from 'vue'
+const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]')
+const isSupplier = userRoles.some(r => r === 'supplier' || r === '供应商')
+
 import AppPagination from '@/components/AppPagination.vue'
 import BarcodeDisplay from '@/components/BarcodeDisplay.vue'
 import QrCodeDisplay from '@/components/QrCodeDisplay.vue'
@@ -147,7 +150,7 @@ function downloadQrCode() {
       
 
 
-	      <el-table-column prop="supplierName" label="供应商名称" min-width="140" align="center" />
+	      <el-table-column v-if="!isSupplier" prop="supplierName" label="供应商名称" min-width="140" align="center" />
       <el-table-column label="收货状态" width="90" align="center">
         <template #default="scope">
           <el-tag :type="scope.row.status === '0' ? 'warning' : scope.row.status === '1' ? 'primary' : 'success'" size="small">

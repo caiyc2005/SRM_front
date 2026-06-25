@@ -147,7 +147,7 @@ function handlePrint(row) {
 
 // ============ 生命周期 ============
 onMounted(() => {
-  loadSuppliers()
+  if (!isSupplier) loadSuppliers()
   loadDeliveries()
 })
 

@@ -127,7 +127,7 @@ async function submitAddUser() {
       addUserDialogVisible.value = false
       ElMessageBox.alert(
         `<div style="text-align: center;">
-          <div style="font-size: 16px; font-weight: 600; color: #67c23a; margin-bottom: 12px;">✅ 用户创建成功</div>
+          <div style="font-size: 16px; font-weight: 600; color: #67c23a; margin-bottom: 12px;">用户创建成功</div>
           <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 8px;">
             <div>
               <div style="font-size: 12px; color: #909399;">登录账号</div>
@@ -216,11 +216,6 @@ async function submitForm() {
   if (!form.supplierName.trim()) { ElMessage.warning('供应商名称不能为空'); return }
   if (!form.people.trim()) { ElMessage.warning('联系人不能为空'); return }
   if (!form.phoneNumber.trim()) { ElMessage.warning('联系电话不能为空'); return }
-  //地址非必填
-// if (selectedRegion.value.length === 0 && !detailAddress.value.trim()) {
-//     ElMessage.warning('请选择省市区或填写详细地址')
-//     return
-//   }
   const fullAddress = (selectedRegion.value.length ? selectedRegion.value.join('') : '') + (detailAddress.value.trim() ? ' ' + detailAddress.value.trim() : '')
 
   const data = {
@@ -275,7 +270,9 @@ function handleToggleStatus(row) {
 }
 
 // ==================== 生命周期 ====================
-onMounted(() => { loadSuppliers() })
+onMounted(async () => {
+  await loadSuppliers()
+})
 watch(() => query.pageSize, () => { query.pageNum = 1 })
 </script>
 
@@ -290,42 +287,89 @@ watch(() => query.pageSize, () => { query.pageNum = 1 })
       </div>
 
       <div class="content">
-        <AppFilter :fields="filterFields" :model="query" @query="handleQuery" @reset="handleReset">
-          <template #buttons>
-            <el-button type="primary" @click="openAdd"><el-icon><Plus /></el-icon> 添加供应商</el-button>
-          </template>
-        </AppFilter>
-
-        <el-card shadow="never">
-          <div class="table-header">
-            <span>供应商列表</span>
-            <span>共 {{ filteredSuppliers.length }} 条</span>
+        <!-- 供应商主账号 → 只显示子账号管理 -->
+        <template v-if="isSupplier">
+          <div v-if="supplierMainAccount" class="my-supplier-card">
+            <div class="my-supplier-head">
+              <div>
+                <h3 style="margin: 0 0 4px;">子账号管理</h3>
+                <span style="font-size: 13px; color: #909399;">供应商：{{ supplierMainAccount.supplierName }}（{{ supplierMainAccount.supplierCode }}）</span>
+              </div>
+              <el-button type="primary" size="small" @click="openAddUser">
+                <el-icon><Plus /></el-icon> 新增子用户
+              </el-button>
+            </div>
+          </div>
+          <div v-else-if="supplierResolved" style="margin-top: 40px;">
+            <el-empty description="未找到关联的供应商信息，当前账号缺少 supplierID，请联系管理员" />
+            <div style="text-align: center; font-size: 12px; color: #999;">
+              登录账号信息：{{ JSON.parse(localStorage.getItem('userInfo') || '{}').userName || '—' }}
+            </div>
           </div>
 
-          <el-table :data="tableData" stripe border style="width: 100%">
-            <el-table-column type="index" label="序号" width="60" align="center" />
-            <el-table-column prop="supplierCode" label="供应商编码" min-width="120" align="center" />
-            <el-table-column prop="supplierName" label="供应商名称" min-width="160" align="center" show-overflow-tooltip />
-            <el-table-column prop="people" label="联系人" min-width="80" align="center" />
-            <el-table-column prop="phoneNumber" label="联系电话" min-width="120" align="center" />
-            <el-table-column prop="address" label="地址" min-width="180" align="center" show-overflow-tooltip />
-            <el-table-column label="状态" width="80" align="center">
-              <template #default="{ row }">
-                <el-tag :type="row.isDel ? 'danger' : 'success'" size="small">{{ row.isDel ? '已停用' : '启用中' }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="memo" label="备注" min-width="120" align="center" show-overflow-tooltip />
-            <el-table-column label="操作" width="240" align="center" fixed="right">
-              <template #default="{ row }">
-                <el-button type="primary" link size="small" @click="openEdit(row)">编辑</el-button>
-                <el-button :type="row.isDel ? 'success' : 'warning'" link size="small" @click="handleToggleStatus(row)">{{ row.isDel ? '启用' : '停用' }}</el-button>
-                <el-button type="info" link size="small" @click="openUserDialog(row)">管理子用户</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+          <el-card v-if="supplierMainAccount" shadow="never" style="margin-top: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <span style="font-weight: bold; color: #333;">子用户列表</span>
+              <span style="color: #999;">共 {{ supplierUsers.length }} 个</span>
+            </div>
 
-          <AppPagination :total="filteredSuppliers.length" :query="query" @change="handlePageChange" />
-        </el-card>
+            <el-table :data="supplierUsers" v-loading="loadingUsers" stripe border size="small" style="width: 100%">
+              <el-table-column type="index" label="序号" width="60" align="center" />
+              <el-table-column prop="userCode" label="登录账号" min-width="120" align="center" />
+              <el-table-column prop="userName" label="用户姓名" min-width="120" align="center" />
+              <el-table-column prop="memo" label="备注" min-width="160" show-overflow-tooltip />
+              <el-table-column label="操作" width="120" align="center">
+                <template #default>
+                  <el-button type="primary" link size="small" @click="openAddUser">新增子用户</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <div v-if="supplierUsers.length === 0 && !loadingUsers" style="text-align: center; padding: 40px 0; color: #999;">
+              暂无子用户，点击上方「新增子用户」添加
+            </div>
+          </el-card>
+        </template>
+
+        <!-- 非供应商 → 原完整页面 -->
+        <template v-else>
+          <AppFilter :fields="filterFields" :model="query" @query="handleQuery" @reset="handleReset">
+            <template #buttons>
+              <el-button type="primary" @click="openAdd"><el-icon><Plus /></el-icon> 添加供应商</el-button>
+            </template>
+          </AppFilter>
+
+          <el-card shadow="never">
+            <div class="table-header">
+              <span>供应商列表</span>
+              <span>共 {{ filteredSuppliers.length }} 条</span>
+            </div>
+
+            <el-table :data="tableData" stripe border style="width: 100%">
+              <el-table-column type="index" label="序号" width="60" align="center" />
+              <el-table-column prop="supplierCode" label="供应商编码" min-width="120" align="center" />
+              <el-table-column prop="supplierName" label="供应商名称" min-width="160" align="center" show-overflow-tooltip />
+              <el-table-column prop="people" label="联系人" min-width="80" align="center" />
+              <el-table-column prop="phoneNumber" label="联系电话" min-width="120" align="center" />
+              <el-table-column prop="address" label="地址" min-width="180" align="center" show-overflow-tooltip />
+              <el-table-column label="状态" width="80" align="center">
+                <template #default="{ row }">
+                  <el-tag :type="row.isDel ? 'danger' : 'success'" size="small">{{ row.isDel ? '已停用' : '启用中' }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="memo" label="备注" min-width="120" align="center" show-overflow-tooltip />
+              <el-table-column label="操作" width="240" align="center" fixed="right">
+                <template #default="{ row }">
+                  <el-button type="primary" link size="small" @click="openEdit(row)">编辑</el-button>
+                  <el-button :type="row.isDel ? 'success' : 'warning'" link size="small" @click="handleToggleStatus(row)">{{ row.isDel ? '启用' : '停用' }}</el-button>
+                  <el-button type="info" link size="small" @click="openUserDialog(row)">管理子用户</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <AppPagination :total="filteredSuppliers.length" :query="query" @change="handlePageChange" />
+          </el-card>
+        </template>
       </div>
     </div>
 
@@ -360,7 +404,7 @@ watch(() => query.pageSize, () => { query.pageNum = 1 })
       </template>
     </el-dialog>
 
-    <!-- ==================== 供应商用户管理弹窗 ==================== -->
+    <!-- 供应商用户管理弹窗 -->
     <el-dialog :model-value="userDialogVisible" :title="'用户管理 - ' + (currentSupplier?.supplierName || '')" width="600px" :close-on-click-modal="false" @update:model-value="userDialogVisible = $event">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <span style="font-size: 14px; color: #666;">共 {{ supplierUsers.length }} 个用户</span>
@@ -381,7 +425,7 @@ watch(() => query.pageSize, () => { query.pageNum = 1 })
       </template>
     </el-dialog>
 
-    <!-- ==================== 新增用户弹窗 ==================== -->
+    <!-- 新增用户弹窗 -->
     <el-dialog :model-value="addUserDialogVisible" title="新增供应商用户" width="450px" :close-on-click-modal="false" @update:model-value="addUserDialogVisible = $event">
       <el-form :model="userForm" label-width="90px" label-position="left">
         <el-form-item label="登录账号" required>
@@ -410,4 +454,19 @@ watch(() => query.pageSize, () => { query.pageNum = 1 })
 .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 14px; }
 .table-header span:first-child { font-weight: bold; color: #333; }
 .table-header span:last-child { color: #999; }
+.my-supplier-card {
+  background: #fff;
+  border-radius: 6px;
+  padding: 20px 24px;
+  border: 1px solid #e8e8e8;
+}
+.my-supplier-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.my-supplier-head h3 {
+  font-size: 18px;
+  color: #333;
+}
 </style>
