@@ -305,16 +305,16 @@ watch(() => query.pageSize, () => { query.pageNum = 1 })
           <el-table :data="tableData" stripe border style="width: 100%">
             <el-table-column type="index" label="序号" width="60" align="center" />
             <el-table-column prop="supplierCode" label="供应商编码" min-width="120" align="center" />
-            <el-table-column prop="supplierName" label="供应商名称" min-width="160" show-overflow-tooltip />
+            <el-table-column prop="supplierName" label="供应商名称" min-width="160" align="center" show-overflow-tooltip />
             <el-table-column prop="people" label="联系人" min-width="80" align="center" />
             <el-table-column prop="phoneNumber" label="联系电话" min-width="120" align="center" />
-            <el-table-column prop="address" label="地址" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="address" label="地址" min-width="180" align="center" show-overflow-tooltip />
             <el-table-column label="状态" width="80" align="center">
               <template #default="{ row }">
                 <el-tag :type="row.isDel ? 'danger' : 'success'" size="small">{{ row.isDel ? '已停用' : '启用中' }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="memo" label="备注" min-width="120" show-overflow-tooltip />
+            <el-table-column prop="memo" label="备注" min-width="120" align="center" show-overflow-tooltip />
             <el-table-column label="操作" width="240" align="center" fixed="right">
               <template #default="{ row }">
                 <el-button type="primary" link size="small" @click="openEdit(row)">编辑</el-button>
