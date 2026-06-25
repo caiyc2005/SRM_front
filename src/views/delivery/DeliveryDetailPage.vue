@@ -93,7 +93,12 @@ async function loadDeliveries() {
             noteCode: item.noteCode,
             orderCode: dd.orderCode || '',
             supplierName: item.supplierName || '',
-            status: item.status ? '1' : '0'
+            status: item.status ? '1' : '0',
+            materialCode: dd.materialCode || '',
+            materialName: dd.materialName || '',
+            spec: dd.spec || '',
+            unit: dd.unit || '',
+            quantity: dd.quantity || 0
           })
         })
       })
@@ -165,10 +170,15 @@ watch(
 
           <el-table :data="tableData" border size="small" style="width: 100%" show-overflow-tooltip>
             <el-table-column prop="index" label="序号" width="60" align="center" />
-            <el-table-column prop="noteCode" label="送货单号" min-width="160" align="center" />
-            <el-table-column prop="orderCode" label="采购单号" min-width="160" align="center" />
-            <el-table-column prop="supplierName" label="供应商" min-width="140" align="center" />
-            <el-table-column label="收货状态" width="100" align="center">
+            <el-table-column prop="noteCode" label="送货单号" min-width="150" align="center" />
+            <el-table-column prop="orderCode" label="采购单号" min-width="140" align="center" />
+            <el-table-column prop="supplierName" label="供应商" min-width="120" align="center" />
+            <el-table-column prop="materialCode" label="物料编码" min-width="110" align="center" />
+            <el-table-column prop="materialName" label="物料名称" min-width="130" align="center" />
+            <el-table-column prop="spec" label="规格" min-width="90" align="center" />
+            <el-table-column prop="unit" label="单位" width="60" align="center" />
+            <el-table-column prop="quantity" label="数量" width="90" align="center" />
+            <el-table-column label="收货状态" width="90" align="center">
               <template #default="scope">
                 <el-tag :type="getStatusTag(scope.row.status)" size="small">
                   {{ getStatusText(scope.row.status) }}
