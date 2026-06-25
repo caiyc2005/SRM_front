@@ -66,6 +66,98 @@ const detailAddress = ref('')
 
 const cascaderProps = { value: 'label', label: 'label', children: 'children' }
 
+// ==================== 供应商用户管理 ====================
+const userDialogVisible = ref(false)
+const currentSupplier = ref(null)
+const supplierUsers = ref([])
+const loadingUsers = ref(false)
+const addUserDialogVisible = ref(false)
+const addUserLoading = ref(false)
+const userForm = reactive({
+  userCode: '',
+  userName: '',
+  memo: ''
+})
+
+function resetUserForm() {
+  userForm.userCode = ''
+  userForm.userName = ''
+  userForm.memo = ''
+}
+
+async function openUserDialog(row) {
+  currentSupplier.value = row
+  userDialogVisible.value = true
+  await loadSupplierUsers(row.supplierID)
+}
+
+async function loadSupplierUsers(supplierID) {
+  loadingUsers.value = true
+  try {
+    const res = await apiPost('GetSupplierUsers', { supplierID })
+    if (res.success && Array.isArray(res.data)) {
+      supplierUsers.value = res.data
+    } else {
+      supplierUsers.value = []
+    }
+  } catch {
+    supplierUsers.value = []
+  } finally {
+    loadingUsers.value = false
+  }
+}
+
+function openAddUser() {
+  resetUserForm()
+  addUserDialogVisible.value = true
+}
+
+async function submitAddUser() {
+  if (!userForm.userCode.trim()) { ElMessage.warning('登录账号不能为空'); return }
+  if (!userForm.userName.trim()) { ElMessage.warning('用户姓名不能为空'); return }
+  addUserLoading.value = true
+  try {
+    const res = await apiPost('CreateSubAccount', {
+      supplierID: currentSupplier.value?.supplierID,
+      userCode: userForm.userCode.trim(),
+      userName: userForm.userName.trim(),
+      memo: userForm.memo.trim()
+    })
+    if (res.success) {
+      addUserDialogVisible.value = false
+      ElMessageBox.alert(
+        `<div style="text-align: center;">
+          <div style="font-size: 16px; font-weight: 600; color: #67c23a; margin-bottom: 12px;">✅ 用户创建成功</div>
+          <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 8px;">
+            <div>
+              <div style="font-size: 12px; color: #909399;">登录账号</div>
+              <div style="font-size: 18px; font-weight: 700;">${userForm.userCode}</div>
+            </div>
+            <div>
+              <div style="font-size: 12px; color: #909399;">默认密码</div>
+              <div style="font-size: 18px; font-weight: 700;">123456</div>
+            </div>
+          </div>
+          <div style="font-size: 13px; color: #909399;">请提醒用户及时修改密码</div>
+        </div>`,
+        '创建成功',
+        {
+          dangerouslyUseHTMLString: true,
+          type: 'success',
+          confirmButtonText: '知道了'
+        }
+      )
+      await loadSupplierUsers(currentSupplier.value?.supplierID)
+      return
+    }
+    ElMessage.error(res.message || '创建失败')
+  } catch {
+    ElMessage.error('创建失败，后端不可用')
+  } finally {
+    addUserLoading.value = false
+  }
+}
+
 function resetForm() {
   Object.assign(form, { supplierID: '', supplierCode: '', supplierName: '', people: '', phoneNumber: '', address: '', memo: '' })
   selectedRegion.value = []
@@ -212,21 +304,22 @@ watch(() => query.pageSize, () => { query.pageNum = 1 })
 
           <el-table :data="tableData" stripe border style="width: 100%">
             <el-table-column type="index" label="序号" width="60" align="center" />
-            <el-table-column prop="supplierCode" label="供应商编码" width="140" align="center" />
-            <el-table-column prop="supplierName" label="供应商名称" min-width="180" show-overflow-tooltip />
-            <el-table-column prop="people" label="联系人" width="100" align="center" />
-            <el-table-column prop="phoneNumber" label="联系电话" width="140" align="center" />
-            <el-table-column prop="address" label="地址" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="supplierCode" label="供应商编码" min-width="120" align="center" />
+            <el-table-column prop="supplierName" label="供应商名称" min-width="160" show-overflow-tooltip />
+            <el-table-column prop="people" label="联系人" min-width="80" align="center" />
+            <el-table-column prop="phoneNumber" label="联系电话" min-width="120" align="center" />
+            <el-table-column prop="address" label="地址" min-width="180" show-overflow-tooltip />
             <el-table-column label="状态" width="80" align="center">
               <template #default="{ row }">
                 <el-tag :type="row.isDel ? 'danger' : 'success'" size="small">{{ row.isDel ? '已停用' : '启用中' }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="memo" label="备注" min-width="140" show-overflow-tooltip />
-            <el-table-column label="操作" width="150" align="center" fixed="right">
+            <el-table-column prop="memo" label="备注" min-width="120" show-overflow-tooltip />
+            <el-table-column label="操作" width="240" align="center" fixed="right">
               <template #default="{ row }">
                 <el-button type="primary" link size="small" @click="openEdit(row)">编辑</el-button>
                 <el-button :type="row.isDel ? 'success' : 'warning'" link size="small" @click="handleToggleStatus(row)">{{ row.isDel ? '启用' : '停用' }}</el-button>
+                <el-button type="info" link size="small" @click="openUserDialog(row)">管理子用户</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -264,6 +357,46 @@ watch(() => query.pageSize, () => { query.pageNum = 1 })
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" @click="submitForm">确认</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- ==================== 供应商用户管理弹窗 ==================== -->
+    <el-dialog :model-value="userDialogVisible" :title="'用户管理 - ' + (currentSupplier?.supplierName || '')" width="600px" :close-on-click-modal="false" @update:model-value="userDialogVisible = $event">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span style="font-size: 14px; color: #666;">共 {{ supplierUsers.length }} 个用户</span>
+        <el-button type="primary" size="small" @click="openAddUser">
+          <el-icon><Plus /></el-icon> 新增用户
+        </el-button>
+      </div>
+
+      <el-table :data="supplierUsers" v-loading="loadingUsers" stripe border size="small" style="width: 100%">
+        <el-table-column type="index" label="序号" width="60" align="center" />
+        <el-table-column prop="userCode" label="登录账号" min-width="120" align="center" />
+        <el-table-column prop="userName" label="用户姓名" min-width="120" align="center" />
+        <el-table-column prop="memo" label="备注" min-width="160" show-overflow-tooltip />
+      </el-table>
+
+      <template #footer>
+        <el-button @click="userDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- ==================== 新增用户弹窗 ==================== -->
+    <el-dialog :model-value="addUserDialogVisible" title="新增供应商用户" width="450px" :close-on-click-modal="false" @update:model-value="addUserDialogVisible = $event">
+      <el-form :model="userForm" label-width="90px" label-position="left">
+        <el-form-item label="登录账号" required>
+          <el-input v-model="userForm.userCode" placeholder="请输入登录账号" maxlength="50" />
+        </el-form-item>
+        <el-form-item label="用户姓名" required>
+          <el-input v-model="userForm.userName" placeholder="请输入用户姓名" maxlength="50" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="userForm.memo" type="textarea" :rows="3" placeholder="选填" maxlength="100" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="addUserDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="addUserLoading" @click="submitAddUser">确认创建</el-button>
       </template>
     </el-dialog>
   </div>
