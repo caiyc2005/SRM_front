@@ -717,7 +717,7 @@ watch(() => route.path, () => {
             <el-button type="success" @click="handleExport">
               <el-icon><Download /></el-icon> 导出Excel
             </el-button>
-            <el-button v-if="!isSupplier" type="primary" @click="openCreateDialog">创建采购订单</el-button>
+            <el-button v-if="!isPendingMode() && !isPendingDeliveryMode()" type="primary" @click="openCreateDialog">创建采购订单</el-button>
           </template>
         </AppFilter>
 
@@ -738,7 +738,7 @@ watch(() => route.path, () => {
       </div>
     </div>
 
-    <CreateOrderDialog v-if="!isSupplier"
+    <CreateOrderDialog v-if="!isPendingMode() && !isPendingDeliveryMode()"
       :visible="createDialogVisible"
       :supplier-list="supplierList"
       :material-list="materialList"
