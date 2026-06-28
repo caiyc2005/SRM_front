@@ -510,8 +510,8 @@ async function loadPendingOrders() {
     const token = localStorage.getItem('token')
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
 
-    // 直接使用送货单数据作为待收料列表
-    const dRes = await fetch(`${API_DELIVERY}/GetDeliveryNote`, {
+    // 调用接口获取待收料数据
+    const dRes = await fetch(`${API_DELIVERY}/GetDeliveryNoteNotIn`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({ page: 1, pageSize: 999, isReceived: false })

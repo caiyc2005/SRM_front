@@ -92,8 +92,8 @@ async function loadPendingOrders() {
     const token = localStorage.getItem('token')
     const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
 
-    // 拉送货单列表，找出未完全收货的记录
-    const res = await fetch(`${API_DELIVERY}/GetDeliveryNote`, {
+    // 拉取待收料列表
+    const res = await fetch(`${API_DELIVERY}/GetDeliveryNoteNotIn`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ page: 1, pageSize: 200 })
