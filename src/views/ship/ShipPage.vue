@@ -19,7 +19,8 @@ const shipStatusOptions = [
 const filterFields = [
   { key: 'shipFilter', label: '发货状态', type: 'select', width: 140, options: shipStatusOptions },
   { key: 'keyword', label: '送货单号/订单号', type: 'input', width: 300, placeholder: '送货单号 / 订单号' },
-  { key: 'dateRange', label: '发货时间', type: 'daterange', width: 300 }
+  { key: 'dateRange', label: '发货时间', type: 'daterange', width: 300 },
+  { key: 'orderDateRange', label: '订单创建时间', type: 'daterange', width: 300 }
 ]
 
 // ==================== 数据 ====================
@@ -30,6 +31,7 @@ const query = reactive({
   shipFilter: '',
   keyword: '',
   dateRange: null,
+  orderDateRange: null,
   pageNum: 1,
   pageSize: 10
 })
@@ -46,8 +48,12 @@ async function loadShipOrders() {
     try { userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}') } catch {}
     const body = { page: 1, pageSize: 999, userID: userInfo.userID || undefined }
     if (query.dateRange) {
-      body.startDate = query.dateRange[0]
-      body.endDate = query.dateRange[1]
+      body.deliveryStartTime = query.dateRange[0]
+      body.deliveryEndTime = query.dateRange[1]
+    }
+    if (query.orderDateRange) {
+      body.startTime = query.orderDateRange[0]
+      body.endTime = query.orderDateRange[1]
     }
     const res = await fetch(`/api/Delivery/GetDeliveryNote`, {
       method: 'POST',
@@ -70,6 +76,8 @@ async function loadShipOrders() {
           ? Number(item.totalAmount).toFixed(2)
           : (item.details || []).reduce((s, dd) => s + (dd.amount || (dd.quantity || 0) * (dd.unitPrice || 0) || 0), 0).toFixed(2),
         createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
+        orderCreateTime: item.orderCreateTime ? item.orderCreateTime.replace('T', ' ').slice(0, 16) : '',
+        deliveryDate: item.deliveryDate ? item.deliveryDate.replace('T', ' ').slice(0, 16) : '',
         noteCode: item.noteCode || '',
         materials: (item.details || []).map((dd, i) => ({
           index: i + 1,
@@ -117,6 +125,15 @@ const filteredOrders = computed(() => {
   if (query.dateRange) {
     const [start, end] = query.dateRange
     list = list.filter(o => {
+      // 未发货（无发货日期）不排除，已发货才按日期筛选
+      if (!o.deliveryDate) return true
+      const d = o.deliveryDate.slice(0, 10)
+      return d >= start && d <= end
+    })
+  }
+  if (query.orderDateRange) {
+    const [start, end] = query.orderDateRange
+    list = list.filter(o => {
       const d = (o.createTime || '').slice(0, 10)
       return d >= start && d <= end
     })
@@ -143,6 +160,7 @@ function handleReset() {
   query.shipFilter = ''
   query.keyword = ''
   query.dateRange = null
+  query.orderDateRange = null
   query.pageNum = 1
   loadShipOrders()
 }

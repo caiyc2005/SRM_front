@@ -104,7 +104,7 @@ const orderFilterFields = computed(() => {
   if (!isPendingMode() && !isPendingDeliveryMode()) {
     fields.push({ key: 'status', label: '订单状态', type: 'select', width: 180, options: orderStatusOptions })
   }
-  fields.push({ key: 'dateRange', label: '创建时间', type: 'daterange', width: 300 })
+  fields.push({ key: 'dateRange', label: isPendingMode() || isPendingDeliveryMode() ? '创建时间' : '发货时间', type: 'daterange', width: 300 })
   return fields
 })
 
@@ -228,6 +228,7 @@ async function loadOrders() {
             return d >= start && d <= end
           })
         }
+        tableData.value = list
         total.value = d.total
         useApi.value = true
       }
@@ -262,6 +263,7 @@ async function loadOrders() {
         ...o,
         status: String(o.status),
         createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
+        deliveryDate: o.deliveryDate ? o.deliveryDate.replace('T', ' ').slice(0, 16) : '',
         materialCount: o.orderDetails?.length || 0,
         totalAmount: (o.orderDetails || []).reduce((s, od) => s + (od.amount || 0), 0).toFixed(2),
         noteCode: o.noteCode || '',
@@ -281,7 +283,8 @@ async function loadOrders() {
       if (query.dateRange) {
         const [start, end] = query.dateRange
         list = list.filter(item => {
-          const d = (item.createTime || '').slice(0, 10)
+          if (!item.deliveryDate) return true
+          const d = item.deliveryDate.slice(0, 10)
           return d >= start && d <= end
         })
       }

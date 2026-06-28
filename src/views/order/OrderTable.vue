@@ -49,7 +49,7 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
 <template>
   <div class="card">
     <div class="table-header">
-      <span>{{ detailMode ? (detailAction === 'delivery' ? '待发货明细' : '确认明细') : '订单列表' }}</span>
+      <span>{{ detailMode ? (detailAction === 'delivery' ? '待生成送货单' : '确认明细') : '订单列表' }}</span>
       <span>
         <el-button v-if="detailMode && detailAction === 'delivery'" type="success" size="small"
           :disabled="selectedRows.length === 0" @click="handleBatchDelivery">
