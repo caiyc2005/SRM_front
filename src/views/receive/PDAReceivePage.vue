@@ -5,7 +5,7 @@
  * 功能：扫码/手动输入送货单号加载送货信息 → 填写实收数量 → 确认收货
  * 样式参考移动端卡片式布局，API 与收料操作一致
  */
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 
@@ -18,6 +18,8 @@ const API_ORDERS = '/api/Orders'
 const searchNoteCode = ref('')
 const foundDelivery = ref(null)
 const notFound = ref(false)
+const searchResults = ref([])       // 多条搜索结果
+const showSearchResults = ref(false)
 const receiveFormItems = ref([])
 const wareList = ref([])
 const selectedWareID = ref('')
@@ -102,8 +104,10 @@ async function loadPendingOrders() {
     if (result.code === 200 && result.data?.items?.length) {
       pendingOrders.value = result.data.items
         .filter(item => {
-          // 过滤掉已全部收完的
-          const allReceived = (item.details || []).every(
+          // 过滤掉已全部收完的（无明细时保留，视为可收料）
+          const hasDetails = item.details && item.details.length > 0
+          if (!hasDetails) return true
+          const allReceived = item.details.every(
             dd => (dd.receivedQty || 0) >= dd.quantity
           )
           return !allReceived
@@ -121,6 +125,7 @@ async function loadPendingOrders() {
 }
 
 function selectPendingOrder(order) {
+  if (searchTimer) clearTimeout(searchTimer)
   searchNoteCode.value = order.noteCode
   handleSearch()
 }
@@ -168,6 +173,8 @@ async function handleSearch() {
   if (!kw) {
     foundDelivery.value = null
     notFound.value = false
+    searchResults.value = []
+    showSearchResults.value = false
     receiveFormItems.value = []
     fieldErrors.value = {}
     submitted.value = false
@@ -179,25 +186,51 @@ async function handleSearch() {
     const res = await fetch(`${API_DELIVERY}/GetDeliveryNote`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ noteCode: kw, page: 1, pageSize: 1 })
+      body: JSON.stringify({ noteCode: kw, page: 1, pageSize: 20 })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
 
     if (result.code === 200 && result.data?.items?.length) {
-      const item = result.data.items[0]
-      const allFullyReceived = (item.details || []).every(
+      const items = result.data.items
+
+      // 多条结果 → 显示列表让用户选择
+      if (items.length > 1) {
+        searchResults.value = items.map(item => ({
+          noteCode: item.noteCode,
+          orderCode: item.orderCode || item.details?.[0]?.orderCode || '',
+          supplierName: item.supplierName || '',
+          status: String(item.status ?? 0),
+          materialCount: item.details?.length || 0
+        }))
+        showSearchResults.value = true
+        foundDelivery.value = null
+        notFound.value = false
+        receiveFormItems.value = []
+        return
+      }
+
+      // 仅一条 → 直接显示详情
+      const item = items[0]
+      // 如果没有明细数据，不拦截（可能后端未返回明细）
+      // 只有确认每条都已收完才提示重复收料
+      const hasDetails = item.details && item.details.length > 0
+      const allFullyReceived = hasDetails && item.details.every(
         dd => (dd.receivedQty || 0) >= dd.quantity
       )
       if (allFullyReceived) {
         ElMessage.warning('该送货单所有物料已全部收完，不可重复收料')
         foundDelivery.value = null
         notFound.value = false
+        searchResults.value = []
+        showSearchResults.value = false
         receiveFormItems.value = []
         submitted.value = false
         return
       }
       notFound.value = false
+      showSearchResults.value = false
+      searchResults.value = []
       submitted.value = false
       fieldErrors.value = {}
       foundDelivery.value = {
@@ -230,14 +263,27 @@ async function handleSearch() {
     }
     notFound.value = true
     foundDelivery.value = null
+    searchResults.value = []
+    showSearchResults.value = false
     receiveFormItems.value = []
   } catch { /* 降级 */ }
+}
+
+/** 从搜索结果列表中选择一条，加载详情 */
+function selectSearchResult(item) {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchNoteCode.value = item.noteCode
+  showSearchResults.value = false
+  searchResults.value = []
+  handleSearch()
 }
 
 function handleClearSearch() {
   searchNoteCode.value = ''
   foundDelivery.value = null
   notFound.value = false
+  searchResults.value = []
+  showSearchResults.value = false
   receiveFormItems.value = []
   fieldErrors.value = {}
   submitted.value = false
@@ -544,7 +590,29 @@ function handleScanDialogClose() {
   scanVisible.value = false
 }
 
-onBeforeUnmount(() => { stopScanner() })
+onBeforeUnmount(() => {
+  stopScanner()
+  if (searchTimer) clearTimeout(searchTimer)
+})
+
+// 动态监测输入：用户输入后自动查询（防抖 500ms）
+let searchTimer = null
+watch(searchNoteCode, (val) => {
+  if (searchTimer) clearTimeout(searchTimer)
+  if (!val.trim()) {
+    foundDelivery.value = null
+    notFound.value = false
+    searchResults.value = []
+    showSearchResults.value = false
+    receiveFormItems.value = []
+    fieldErrors.value = {}
+    submitted.value = false
+    return
+  }
+  searchTimer = setTimeout(() => {
+    handleSearch()
+  }, 500)
+})
 
 onMounted(() => {
   loadWarehouses()
@@ -597,6 +665,36 @@ onMounted(() => {
 
       <!-- 提示消息 -->
       <p v-if="notFound" class="message">未找到该送货单，请检查单号是否正确</p>
+
+      <!-- ========== 多条搜索结果 ========== -->
+      <section v-if="showSearchResults && searchResults.length > 0" class="app-section">
+        <div class="section-title-row">
+          <h2 class="section-title">搜索结果</h2>
+          <span class="section-count">{{ searchResults.length }} 条</span>
+        </div>
+        <div class="order-list">
+          <div
+            v-for="item in searchResults"
+            :key="item.noteCode"
+            class="detail-card order-card"
+            @click="selectSearchResult(item)"
+          >
+            <div class="detail-card__head">
+              <div class="detail-card__title-block">
+                <span class="detail-card__name">{{ item.noteCode }}</span>
+                <span class="detail-card__code">{{ item.orderCode }}</span>
+              </div>
+              <span class="detail-card__wait">{{ item.materialCount }} 项</span>
+            </div>
+            <div class="detail-card__numbers">
+              <span>{{ item.supplierName }}</span>
+              <span :style="{ color: item.status === '2' ? '#1f7b5b' : item.status === '1' ? '#1890ff' : '#c97a1a' }">
+                {{ item.status === '2' ? '已收货' : item.status === '1' ? '已发货' : '未发货' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <!-- ========== 收料记录 ========== -->
       <template v-if="showRecords">
@@ -741,7 +839,7 @@ onMounted(() => {
       </section>
 
       <!-- 待收订单 -->
-      <section v-if="!foundDelivery && !notFound" class="app-section">
+      <section v-if="!foundDelivery && !notFound && !showSearchResults" class="app-section">
         <div class="section-title-row">
           <h2 class="section-title">待收订单</h2>
           <span v-if="pendingOrders.length" class="section-count">{{ pendingOrders.length }} 单</span>

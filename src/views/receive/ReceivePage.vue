@@ -73,7 +73,8 @@ async function handleSearch() {
     if (result.code === 200 && result.data?.items?.length) {
       const item = result.data.items[0]
       // 检查是否所有物料都已收完（累计已收 >= 送货数量）
-      const allFullyReceived = (item.details || []).every(
+      const hasDetails = item.details && item.details.length > 0
+      const allFullyReceived = hasDetails && item.details.every(
         dd => (dd.receivedQty || 0) >= dd.quantity
       )
       if (allFullyReceived) {
