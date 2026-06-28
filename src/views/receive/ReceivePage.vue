@@ -8,6 +8,7 @@
  */
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import ExcelJS from 'exceljs'
 import AppSidebar from '@/components/AppSidebar.vue'
 import AppFilter from '@/components/AppFilter.vue'
 import AppPagination from '@/components/AppPagination.vue'
@@ -85,7 +86,7 @@ async function handleSearch() {
       foundDelivery.value = {
         noteCode: item.noteCode,
         orderID: item.orderID || '',
-        orderCode: item.orderCode || '',
+        orderCode: item.orderCode || item.details?.[0]?.orderCode || '',
         supplierName: item.supplierName || '',
         supplierCode: item.supplierCode || '',
         expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
@@ -195,6 +196,23 @@ async function handleConfirmReceive() {
       ElMessage.warning(`物料「${item.materialName}」的实收数量已自动修正为最大可收数量 ${item.remaining}`)
       return
     }
+  }
+
+  // 如果送货单状态为"未发货"（status=0），需额外二次确认
+  if (delivery.status === '0') {
+    try {
+      await ElMessageBox.confirm(
+        `该送货单【${delivery.noteCode}】当前状态为「未发货」，确认要直接收料吗？\n` +
+        `建议先联系供应商确认发货情况。`,
+        '未发货收料确认',
+        {
+          type: 'warning',
+          confirmButtonText: '仍要收料',
+          cancelButtonText: '取消',
+          confirmButtonClass: 'el-button--danger'
+        }
+      )
+    } catch { return }
   }
 
   const totalPlan = items.reduce((s, i) => s + i.quantity, 0)
@@ -706,6 +724,151 @@ onBeforeUnmount(() => {
   stopScanner()
 })
 
+// ==================== 导出 Excel ====================
+/** 列宽自适应 */
+function calcColWidths(headers, rows) {
+  return headers.map((h, i) => {
+    let maxLen = h.length * 2
+    for (const row of rows) {
+      const val = String(row[i] ?? '')
+      const len = [...val].reduce((s, c) => s + (c.charCodeAt(0) > 127 ? 2 : 1), 0)
+      if (len > maxLen) maxLen = len
+    }
+    return { width: Math.min(maxLen + 4, 60) }
+  })
+}
+
+/** 导出收料记录 */
+async function handleHistoryExport() {
+  const data = filteredHistoryRecords.value
+  if (!data || data.length === 0) {
+    ElMessage.warning('暂无数据可导出')
+    return
+  }
+
+  const headers = ['收料单号', '送货单号', '供应商', '计划总数', '实收总数', '差异', '操作员', '收料时间']
+
+  const rows = data.map(item => [
+    item.recordCode,
+    item.noteCode,
+    item.supplierName,
+    item.totalPlanQty,
+    item.totalReceivedQty,
+    item.totalDiffQty,
+    item.operator,
+    item.receiveDate
+  ])
+
+  const workbook = new ExcelJS.Workbook()
+  workbook.creator = 'SRM系统'
+  workbook.created = new Date()
+  const sheet = workbook.addWorksheet('收料记录')
+
+  sheet.columns = calcColWidths(headers, rows)
+
+  const headerRow = sheet.addRow(headers)
+  headerRow.font = { name: '微软雅黑', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF409EFF' } }
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' }
+  headerRow.border = {
+    top: { style: 'thin' }, bottom: { style: 'thin' },
+    left: { style: 'thin' }, right: { style: 'thin' }
+  }
+  headerRow.height = 28
+
+  rows.forEach((row, idx) => {
+    const dataRow = sheet.addRow(row)
+    dataRow.font = { name: '微软雅黑', size: 10.5 }
+    dataRow.alignment = { vertical: 'middle', horizontal: 'center' }
+    dataRow.border = {
+      top: { style: 'thin' }, bottom: { style: 'thin' },
+      left: { style: 'thin' }, right: { style: 'thin' }
+    }
+    dataRow.height = 24
+    if (idx % 2 === 1) {
+      dataRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F7FA' } }
+    }
+  })
+
+  let userName = ''
+  try { userName = JSON.parse(localStorage.getItem('userInfo') || '{}').userName || '' } catch {}
+  const dateStr = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}`
+  const fileName = `收料记录_${userName}_${dateStr}.xlsx`
+  const buffer = await workbook.xlsx.writeBuffer()
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  a.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success('导出成功')
+}
+
+/** 导出待收料列表 */
+async function handlePendingExport() {
+  const data = pendingTableData.value
+  if (!data || data.length === 0) {
+    ElMessage.warning('暂无数据可导出')
+    return
+  }
+
+  const headers = ['送货单号', '订单编号', '供应商', '物料种数', '订单状态']
+
+  const rows = data.map(item => [
+    item.noteCode || '—',
+    item.orderCode,
+    item.supplierName,
+    item.materialCount,
+    getDeliveryStatusText(item.status)
+  ])
+
+  const workbook = new ExcelJS.Workbook()
+  workbook.creator = 'SRM系统'
+  workbook.created = new Date()
+  const sheet = workbook.addWorksheet('待收料列表')
+
+  sheet.columns = calcColWidths(headers, rows)
+
+  const headerRow = sheet.addRow(headers)
+  headerRow.font = { name: '微软雅黑', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF409EFF' } }
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' }
+  headerRow.border = {
+    top: { style: 'thin' }, bottom: { style: 'thin' },
+    left: { style: 'thin' }, right: { style: 'thin' }
+  }
+  headerRow.height = 28
+
+  rows.forEach((row, idx) => {
+    const dataRow = sheet.addRow(row)
+    dataRow.font = { name: '微软雅黑', size: 10.5 }
+    dataRow.alignment = { vertical: 'middle', horizontal: 'center' }
+    dataRow.border = {
+      top: { style: 'thin' }, bottom: { style: 'thin' },
+      left: { style: 'thin' }, right: { style: 'thin' }
+    }
+    dataRow.height = 24
+    if (idx % 2 === 1) {
+      dataRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F7FA' } }
+    }
+  })
+
+  let userName = ''
+  try { userName = JSON.parse(localStorage.getItem('userInfo') || '{}').userName || '' } catch {}
+  const dateStr = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}`
+  const fileName = `待收料列表_${userName}_${dateStr}.xlsx`
+  const buffer = await workbook.xlsx.writeBuffer()
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  a.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success('导出成功')
+}
+
 // ==================== 生命周期 ====================
 onMounted(() => {
   loadSuppliers()
@@ -923,6 +1086,9 @@ onMounted(() => {
                 />
                 <el-button type="primary" @click="handleHistoryQuery">查询</el-button>
                 <el-button @click="handleHistoryReset">重置</el-button>
+                <el-button type="success" @click="handleHistoryExport">
+                  <el-icon><Download /></el-icon> 导出Excel
+                </el-button>
               </div>
 
               <div class="table-header">
@@ -998,7 +1164,13 @@ onMounted(() => {
 
             <!-- ==================== Tab3：待收料 ==================== -->
             <el-tab-pane label="待收料" name="pending">
-              <AppFilter :fields="pendingFilterFields" :model="pendingQuery" @query="handlePendingQuery" @reset="handlePendingReset" />
+              <AppFilter :fields="pendingFilterFields" :model="pendingQuery" @query="handlePendingQuery" @reset="handlePendingReset">
+                <template #buttons>
+                  <el-button type="success" @click="handlePendingExport">
+                    <el-icon><Download /></el-icon> 导出Excel
+                  </el-button>
+                </template>
+              </AppFilter>
 
               <div class="table-header">
                 <span>待收料列表</span>

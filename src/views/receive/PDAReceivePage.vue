@@ -203,7 +203,7 @@ async function handleSearch() {
       foundDelivery.value = {
         noteCode: item.noteCode,
         orderID: item.orderID || '',
-        orderCode: item.orderCode || '',
+        orderCode: item.orderCode || item.details?.[0]?.orderCode || '',
         supplierName: item.supplierName || '',
         supplierCode: item.supplierCode || '',
         expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
@@ -346,6 +346,23 @@ async function handleSubmit() {
 
   const delivery = foundDelivery.value
   const items = receiveFormItems.value
+
+  // 如果送货单状态为"未发货"（status=0），需额外二次确认
+  if (delivery.status === '0') {
+    try {
+      await ElMessageBox.confirm(
+        `该送货单【${delivery.noteCode}】当前状态为「未发货」，确认要直接收料吗？\n` +
+        `建议先联系供应商确认发货情况。`,
+        '未发货收料确认',
+        {
+          type: 'warning',
+          confirmButtonText: '仍要收料',
+          cancelButtonText: '取消',
+          confirmButtonClass: 'el-button--danger'
+        }
+      )
+    } catch { return }
+  }
 
   try {
     await ElMessageBox.confirm(

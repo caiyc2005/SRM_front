@@ -3,6 +3,7 @@ import { reactive, ref, computed, onMounted, watch } from 'vue'
 
 // 已有 computed 导入
 import { ElMessage, ElMessageBox } from 'element-plus'
+import ExcelJS from 'exceljs'
 
 import AppSidebar from '@/components/AppSidebar.vue'
 import AppFilter from '@/components/AppFilter.vue'
@@ -186,6 +187,89 @@ function handlePrint(row) {
   printVisible.value = true
 }
 
+function getDeliveryStatusText(status) {
+  return status === '2' ? '已收货' : status === '1' ? '已发货' : '未发货'
+}
+
+/** 列宽自适应 */
+function calcColWidths(headers, rows) {
+  return headers.map((h, i) => {
+    let maxLen = h.length * 2
+    for (const row of rows) {
+      const val = String(row[i] ?? '')
+      const len = [...val].reduce((s, c) => s + (c.charCodeAt(0) > 127 ? 2 : 1), 0)
+      if (len > maxLen) maxLen = len
+    }
+    return { width: Math.min(maxLen + 4, 60) }
+  })
+}
+
+async function handleExport() {
+  const data = tableData.value
+  if (!data || data.length === 0) {
+    ElMessage.warning('暂无数据可导出')
+    return
+  }
+
+  const headers = ['送货单号', '订单编号', '供应商', '物料种数', '创建时间', '实际发货时间', '货物状态']
+
+  const rows = data.map(item => [
+    item.noteCode,
+    item.orderCode,
+    item.supplierName,
+    item.materialCount,
+    item.createTime,
+    item.receiveTime || '—',
+    getDeliveryStatusText(item.status)
+  ])
+
+  const workbook = new ExcelJS.Workbook()
+  workbook.creator = 'SRM系统'
+  workbook.created = new Date()
+
+  const sheet = workbook.addWorksheet('送货单')
+
+  sheet.columns = calcColWidths(headers, rows)
+
+  const headerRow = sheet.addRow(headers)
+  headerRow.font = { name: '微软雅黑', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF409EFF' } }
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' }
+  headerRow.border = {
+    top: { style: 'thin' }, bottom: { style: 'thin' },
+    left: { style: 'thin' }, right: { style: 'thin' }
+  }
+  headerRow.height = 28
+
+  rows.forEach((row, idx) => {
+    const dataRow = sheet.addRow(row)
+    dataRow.font = { name: '微软雅黑', size: 10.5 }
+    dataRow.alignment = { vertical: 'middle', horizontal: 'center' }
+    dataRow.border = {
+      top: { style: 'thin' }, bottom: { style: 'thin' },
+      left: { style: 'thin' }, right: { style: 'thin' }
+    }
+    dataRow.height = 24
+    if (idx % 2 === 1) {
+      dataRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F7FA' } }
+    }
+  })
+
+  let userName = ''
+  try { userName = JSON.parse(localStorage.getItem('userInfo') || '{}').userName || '' } catch {}
+  const dateStr = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}`
+  const fileName = `送货单列表_${userName}_${dateStr}.xlsx`
+  const buffer = await workbook.xlsx.writeBuffer()
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  a.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success('导出成功')
+}
+
 // ============ 生命周期 ============
 onMounted(() => {
   if (!isSupplier) loadSuppliers()
@@ -214,7 +298,13 @@ watch(
           :model="query"
           @query="handleQuery"
           @reset="handleReset"
-        />
+        >
+          <template #buttons>
+            <el-button type="success" @click="handleExport">
+              <el-icon><Download /></el-icon> 导出Excel
+            </el-button>
+          </template>
+        </AppFilter>
 
         <DeliveryTable
           :table-data="tableData"
