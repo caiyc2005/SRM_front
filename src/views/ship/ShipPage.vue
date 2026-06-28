@@ -18,7 +18,8 @@ const shipStatusOptions = [
 
 const filterFields = [
   { key: 'shipFilter', label: '发货状态', type: 'select', width: 140, options: shipStatusOptions },
-  { key: 'keyword', label: '送货单号/订单号', type: 'input', width: 300, placeholder: '送货单号 / 订单号' }
+  { key: 'keyword', label: '送货单号/订单号', type: 'input', width: 300, placeholder: '送货单号 / 订单号' },
+  { key: 'dateRange', label: '发货时间', type: 'daterange', width: 300 }
 ]
 
 // ==================== 数据 ====================
@@ -28,6 +29,7 @@ const tableRef = ref(null)
 const query = reactive({
   shipFilter: '',
   keyword: '',
+  dateRange: null,
   pageNum: 1,
   pageSize: 10
 })
@@ -42,10 +44,15 @@ async function loadShipOrders() {
     const token = localStorage.getItem('token')
     let userInfo = { userID: '' }
     try { userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}') } catch {}
+    const body = { page: 1, pageSize: 999, userID: userInfo.userID || undefined }
+    if (query.dateRange) {
+      body.startDate = query.dateRange[0]
+      body.endDate = query.dateRange[1]
+    }
     const res = await fetch(`/api/Delivery/GetDeliveryNote`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ page: 1, pageSize: 999, userID: userInfo.userID || undefined })
+      body: JSON.stringify(body)
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
@@ -107,6 +114,13 @@ const filteredOrders = computed(() => {
   } else if (query.shipFilter === 'shipped') {
     list = list.filter(o => ['3', '4', '5'].includes(o.status))
   }
+  if (query.dateRange) {
+    const [start, end] = query.dateRange
+    list = list.filter(o => {
+      const d = (o.createTime || '').slice(0, 10)
+      return d >= start && d <= end
+    })
+  }
   return list
 })
 
@@ -122,12 +136,15 @@ function handlePageChange() {
 
 function handleQuery() {
   query.pageNum = 1
+  loadShipOrders()
 }
 
 function handleReset() {
   query.shipFilter = ''
   query.keyword = ''
+  query.dateRange = null
   query.pageNum = 1
+  loadShipOrders()
 }
 
 function handleRowClick(row) {

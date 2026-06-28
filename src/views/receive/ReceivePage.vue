@@ -302,18 +302,29 @@ const historyKeyword = ref('')
 
 const historyQuery = reactive({
   pageNum: 1,
-  pageSize: 10
+  pageSize: 10,
+  dateRange: null
 })
 
 const filteredHistoryRecords = computed(() => {
+  let list = receiveRecords.value
   const kw = historyKeyword.value.trim().toLowerCase()
-  if (!kw) return receiveRecords.value
-  return receiveRecords.value.filter(r =>
-    r.noteCode.toLowerCase().includes(kw) ||
-    r.recordCode.toLowerCase().includes(kw) ||
-    r.orderCode.toLowerCase().includes(kw) ||
-    r.supplierName.toLowerCase().includes(kw)
-  )
+  if (kw) {
+    list = list.filter(r =>
+      r.noteCode.toLowerCase().includes(kw) ||
+      r.recordCode.toLowerCase().includes(kw) ||
+      r.orderCode.toLowerCase().includes(kw) ||
+      r.supplierName.toLowerCase().includes(kw)
+    )
+  }
+  if (historyQuery.dateRange) {
+    const [start, end] = historyQuery.dateRange
+    list = list.filter(r => {
+      const d = (r.receiveDate || '').slice(0, 10)
+      return d >= start && d <= end
+    })
+  }
+  return list
 })
 
 const historyTableData = computed(() => {
@@ -325,6 +336,18 @@ const historyTableRef = ref(null)
 
 function handleHistoryPageChange() {}
 
+function handleHistoryQuery() {
+  historyQuery.pageNum = 1
+  loadReceiveRecords()
+}
+
+function handleHistoryReset() {
+  historyKeyword.value = ''
+  historyQuery.dateRange = null
+  historyQuery.pageNum = 1
+  loadReceiveRecords()
+}
+
 function handleHistoryRowClick(row) {
   if (historyTableRef.value) {
     historyTableRef.value.toggleRowExpansion(row)
@@ -334,10 +357,15 @@ function handleHistoryRowClick(row) {
 async function loadReceiveRecords() {
   try {
     const token = localStorage.getItem('token')
+    const body = { page: historyQuery.pageNum, pageSize: historyQuery.pageSize }
+    if (historyQuery.dateRange) {
+      body.startDate = historyQuery.dateRange[0]
+      body.endDate = historyQuery.dateRange[1]
+    }
     const res = await fetch(`${API_RECEIVE}/GetReceivesList`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ page: historyQuery.pageNum, pageSize: historyQuery.pageSize })
+      body: JSON.stringify(body)
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
@@ -876,14 +904,25 @@ onMounted(() => {
                   size="default"
                   style="width: 360px"
                   @input="historyQuery.pageNum = 1"
-                  @keyup.enter="historyQuery.pageNum = 1"
+                  @keyup.enter="handleHistoryQuery"
                 >
                   <template #prefix>
                     <el-icon><Search /></el-icon>
                   </template>
                 </el-input>
-                <el-button type="primary" @click="historyQuery.pageNum = 1">查询</el-button>
-                <el-button @click="historyKeyword = ''; historyQuery.pageNum = 1">重置</el-button>
+                <el-date-picker
+                  v-model="historyQuery.dateRange"
+                  type="daterange"
+                  range-separator="至"
+                  start-placeholder="收料开始日期"
+                  end-placeholder="收料结束日期"
+                  value-format="YYYY-MM-DD"
+                  style="width: 280px"
+                  clearable
+                  @change="historyQuery.pageNum = 1"
+                />
+                <el-button type="primary" @click="handleHistoryQuery">查询</el-button>
+                <el-button @click="handleHistoryReset">重置</el-button>
               </div>
 
               <div class="table-header">

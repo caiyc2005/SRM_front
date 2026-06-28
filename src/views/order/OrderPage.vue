@@ -45,6 +45,7 @@ const query = reactive({
   supplierID: '',
   status: '',
   confirmStatus: '0',
+  dateRange: null,
   pageNum: 1,
   pageSize: 10
 })
@@ -103,6 +104,7 @@ const orderFilterFields = computed(() => {
   if (!isPendingMode() && !isPendingDeliveryMode()) {
     fields.push({ key: 'status', label: '订单状态', type: 'select', width: 180, options: orderStatusOptions })
   }
+  fields.push({ key: 'dateRange', label: '创建时间', type: 'daterange', width: 300 })
   return fields
 })
 
@@ -126,6 +128,10 @@ async function loadOrders() {
       const params = {}
       if (query.orderCode) params.orderCode = query.orderCode
       if (query.supplierID) params.supplierID = query.supplierID
+      if (query.dateRange) {
+        params.startTime = query.dateRange[0]
+        params.endTime = query.dateRange[1]
+      }
       params.pageIndex = query.pageNum
       params.pageSize = query.pageSize
 
@@ -160,6 +166,14 @@ async function loadOrders() {
         } else if (query.confirmStatus === '0') {
           list = list.filter(item => item.detailStatus === '0')
         }
+        // 客户端二次校验：日期区间筛选
+        if (query.dateRange) {
+          const [start, end] = query.dateRange
+          list = list.filter(item => {
+            const d = (item.createTime || '').slice(0, 10)
+            return d >= start && d <= end
+          })
+        }
         tableData.value = list
         total.value = list.length
         useApi.value = true
@@ -172,6 +186,10 @@ async function loadOrders() {
       const params = {}
       if (query.orderCode) params.orderCode = query.orderCode
       if (query.supplierID) params.supplierID = query.supplierID
+      if (query.dateRange) {
+        params.startTime = query.dateRange[0]
+        params.endTime = query.dateRange[1]
+      }
       params.pageIndex = query.pageNum
       params.pageSize = query.pageSize
 
@@ -185,7 +203,7 @@ async function loadOrders() {
 
       if (result.success && result.data) {
         const d = result.data
-        tableData.value = (d.list || []).map(od => ({
+        let list = (d.list || []).map(od => ({
           orderID: od.orderID,
           orderCode: od.orderCode,
           supplierName: od.supplierName,
@@ -202,6 +220,14 @@ async function loadOrders() {
           unitPrice: od.unitPrice,
           amount: od.amount
         }))
+        // 客户端二次校验：日期区间筛选
+        if (query.dateRange) {
+          const [start, end] = query.dateRange
+          list = list.filter(item => {
+            const d = (item.createTime || '').slice(0, 10)
+            return d >= start && d <= end
+          })
+        }
         total.value = d.total
         useApi.value = true
       }
@@ -212,6 +238,10 @@ async function loadOrders() {
     const params = new URLSearchParams()
     if (query.orderCode) params.append('orderCode', query.orderCode)
     if (query.supplierID) params.append('supplierID', query.supplierID)
+    if (query.dateRange) {
+      params.append('startDate', query.dateRange[0])
+      params.append('endDate', query.dateRange[1])
+    }
     if (query.status) {
       params.append('status', query.status)
     }
@@ -228,8 +258,7 @@ async function loadOrders() {
 
     if (result.success && result.data) {
       const d = result.data
-      total.value = d.total
-      tableData.value = (d.list || []).map(o => ({
+      let list = (d.list || []).map(o => ({
         ...o,
         status: String(o.status),
         createTime: o.createTime ? o.createTime.replace('T', ' ').slice(0, 16) : '',
@@ -248,6 +277,16 @@ async function loadOrders() {
           isConfirm: od.isConfirm
         }))
       }))
+      // 客户端二次校验：日期区间筛选
+      if (query.dateRange) {
+        const [start, end] = query.dateRange
+        list = list.filter(item => {
+          const d = (item.createTime || '').slice(0, 10)
+          return d >= start && d <= end
+        })
+      }
+      tableData.value = list
+      total.value = d.total
       useApi.value = true
       return
     }
@@ -268,6 +307,7 @@ function handleReset() {
   query.supplierID = ''
   query.status = ''
   query.confirmStatus = '0'
+  query.dateRange = null
   query.pageNum = 1
   loadOrders()
 }

@@ -37,6 +37,20 @@ const emit = defineEmits(['query', 'reset'])
             clearable
           />
         </div>
+        <!-- 日期范围 -->
+        <div v-else-if="field.type === 'daterange'" class="filter-item">
+          <label>{{ field.label }}</label>
+          <el-date-picker
+            v-model="model[field.key]"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            :style="{ width: (field.width || 300) + 'px' }"
+            clearable
+          />
+        </div>
         <!-- 下拉选择 -->
         <div v-else-if="field.type === 'select'" class="filter-item">
           <label>{{ field.label }}</label>

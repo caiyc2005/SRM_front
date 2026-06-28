@@ -38,6 +38,7 @@ const query = reactive({
   orderCode: '',
   supplierId: '',
   status: '',
+  dateRange: null,
   pageNum: 1,
   pageSize: 10
 })
@@ -67,6 +68,7 @@ const deliveryFilterFields = computed(() => {
     fields.push({ key: 'supplierId', label: '供应商', type: 'select', width: 220, options: supplierList.value, labelKey: 'supplierName', valueKey: 'supplierID' })
   }
   fields.push({ key: 'status', label: '货物状态', type: 'select', width: 180, options: deliveryStatusOptions })
+  fields.push({ key: 'dateRange', label: '创建时间', type: 'daterange', width: 300 })
   return fields
 })
 
@@ -87,6 +89,8 @@ async function loadDeliveries() {
         orderCode: query.orderCode || undefined,//把orderCode字段传给后端
         supplierId: query.supplierId || undefined,
         status: query.status && query.status !== 'all' ? Number(query.status) : undefined,
+        startTime: query.dateRange ? query.dateRange[0] : undefined,
+        endTime: query.dateRange ? query.dateRange[1] : undefined,
         page: query.pageNum,
         pageSize: query.pageSize
       })
@@ -96,8 +100,7 @@ async function loadDeliveries() {
 
     if (result.code === 200 && result.data) {
       const d = result.data
-      total.value = d.total
-      tableData.value = (d.items || []).map(item => ({
+      let list = (d.items || []).map(item => ({
         id: item.noteID,
         noteCode: item.noteCode,
         orderCode: item.orderCode || '',
@@ -121,6 +124,16 @@ async function loadDeliveries() {
           remark: ''
         }))
       }))
+      // 客户端二次校验：日期区间筛选
+      if (query.dateRange) {
+        const [start, end] = query.dateRange
+        list = list.filter(item => {
+          const d = (item.createTime || '').slice(0, 10)
+          return d >= start && d <= end
+        })
+      }
+      tableData.value = list
+      total.value = d.total
       useApi.value = true
       return
     }
@@ -137,6 +150,7 @@ function handleReset() {
   query.orderCode = ''
   query.supplierId = ''
   query.status = 'all'
+  query.dateRange = null
   query.pageNum = 1
   loadDeliveries()
 }
