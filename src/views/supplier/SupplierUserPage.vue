@@ -9,6 +9,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import AppSidebar from '@/components/AppSidebar.vue'
 import Logout from '@/components/Logout.vue'
 
+const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+const noPermission = !userInfo.isMainAccount
+
 const supplierUsers = ref([])
 const loadingUsers = ref(false)
 const addUserDialogVisible = ref(false)
@@ -94,7 +97,9 @@ async function submitAddUser() {
   }
 }
 
-onMounted(() => { loadSupplierUsers() })
+onMounted(() => {
+  if (!noPermission) loadSupplierUsers()
+})
 </script>
 
 <template>
@@ -108,6 +113,10 @@ onMounted(() => { loadSupplierUsers() })
       </div>
 
       <div class="content">
+        <div v-if="noPermission" style="margin-top: 60px;">
+          <el-empty description="当前账号无权限管理供应商子账号，请联系供应商主账号" />
+        </div>
+        <template v-else>
         <el-card shadow="never">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <span style="font-weight: bold; color: #333; font-size: 15px;">子用户列表</span>
@@ -127,6 +136,7 @@ onMounted(() => { loadSupplierUsers() })
             暂无子用户，点击右上角「新增子用户」添加
           </div>
         </el-card>
+        </template>
       </div>
     </div>
 

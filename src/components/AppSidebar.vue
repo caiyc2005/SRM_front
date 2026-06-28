@@ -44,7 +44,8 @@ const pendingCount = ref(0)
 const canViewPendingOrder = computed(() => hasPathAccess('/order/pending'))
 
 async function fetchPendingCount() {
-  if (!canViewPendingOrder.value) return
+  const token = localStorage.getItem('token')
+  if (!token || !canViewPendingOrder.value) return
   try {
     const token = localStorage.getItem('token')
     const res = await fetch('/api/Orders/GetOrdersDetailsByList', {
