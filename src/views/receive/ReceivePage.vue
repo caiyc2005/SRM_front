@@ -264,7 +264,11 @@ async function handleConfirmReceive() {
         loadReceiveRecords()
         return
       }
-      ElMessage.error(result.message || '后端收货失败，尝试本地记录')
+      ElMessageBox.alert(result.message || '后端收货失败', '收料失败', {
+        type: 'error',
+        confirmButtonText: '知道了'
+      })
+      return  // 后端返回错误，不走降级逻辑
     } catch {
       ElMessage.warning('后端不可用，已保存到本地记录')
     }

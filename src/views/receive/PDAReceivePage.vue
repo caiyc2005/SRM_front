@@ -447,7 +447,10 @@ async function handleSubmit() {
       submitted.value = true
       return
     }
-    ElMessage.error(result.message || '收货失败')
+    ElMessageBox.alert(result.message || '收货失败', '收料失败', {
+      type: 'error',
+      confirmButtonText: '知道了'
+    })
   } catch {
     ElMessage.error('后端接口不可用，收货失败')
   } finally {
