@@ -93,19 +93,21 @@ async function handleSearch() {
         expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
         createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
         status: String(item.status ?? 0),
-        materials: (item.details || []).map((dd, i) => ({
-          index: i + 1,
-          orderCode: dd.orderCode || '',
-          materialCode: dd.materialCode,
-          materialName: dd.materialName || '',
-          spec: dd.spec || '',
-          unit: dd.unit || '',
-          quantity: dd.quantity,
-          historyReceived: dd.receivedQty || 0,
-          remaining: Math.max(0, dd.quantity - (dd.receivedQty || 0)),
-          receivedQty: 0,
-          remark: ''
-        }))
+        materials: (item.details || [])
+          .filter(dd => (dd.receivedQty || 0) < dd.quantity)
+          .map((dd, i) => ({
+            index: i + 1,
+            orderCode: dd.orderCode || '',
+            materialCode: dd.materialCode,
+            materialName: dd.materialName || '',
+            spec: dd.spec || '',
+            unit: dd.unit || '',
+            quantity: dd.quantity,
+            historyReceived: dd.receivedQty || 0,
+            remaining: Math.max(0, dd.quantity - (dd.receivedQty || 0)),
+            receivedQty: 0,
+            remark: ''
+          }))
       }
       receiveFormItems.value = foundDelivery.value.materials.map(m => ({
         ...m,
@@ -198,6 +200,11 @@ async function handleConfirmReceive() {
       return
     }
   }
+  const hasReceived = items.some(i => Number(i.receivedQty) > 0)
+  if (!hasReceived) {
+    ElMessage.warning('收料总数不能为零，至少需要一项物料有收料数量')
+    return
+  }
 
   // 如果送货单状态为"未发货"（status=0），需额外二次确认
   if (delivery.status === '0') {
@@ -244,7 +251,7 @@ async function handleConfirmReceive() {
           wareID: selectedWareID.value,
           receiveUserID: userInfo.userID || '',
           receiveUserName: userInfo.userName || '仓管员',
-          details: items.map(i => ({
+          details: items.filter(i => Number(i.receivedQty) > 0).map(i => ({
             materialCode: i.materialCode,
             receivedQty: Number(i.receivedQty)
           }))

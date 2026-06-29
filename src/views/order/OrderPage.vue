@@ -657,12 +657,14 @@ async function handleGenerateDelivery(row) {
 // ============ 送货数量弹窗 ============
 const deliveryQtyVisible = ref(false)
 const deliveryQtyItems = ref([])
+const deliveryExpectedDate = ref('')
 
 function openDeliveryQtyDialog(rows) {
   deliveryQtyItems.value = rows.map(r => ({
     ...r,
     deliveryQty: r.availableQty // 默认等于可发货最大数量
   }))
+  deliveryExpectedDate.value = ''
   deliveryQtyVisible.value = true
 }
 
@@ -696,6 +698,7 @@ async function confirmDeliveryWithQty() {
           orderCode: r.orderCode,
           deliveryQty: r.deliveryQty
         })),
+        expectedDate: deliveryExpectedDate.value || undefined,
         createByID: userInfo.userID || '',
         createByName: userInfo.userName || ''
       })
@@ -797,6 +800,18 @@ watch(() => route.path, () => {
       <div style="margin-bottom: 12px; font-size: 13px; color: #666;">
         送货数量默认等于可发货最大数量，可修改为更小值支持分批送货。
       </div>
+      <div style="margin-bottom: 16px; display: flex; gap: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 13px; color: #666;">预计送达时间：</span>
+          <el-date-picker
+            v-model="deliveryExpectedDate"
+            type="date"
+            placeholder="请选择预计送达时间"
+            size="small"
+            style="width: 180px"
+          />
+          </div>
+        </div>
       <el-table :data="deliveryQtyItems" border size="small" style="width: 100%">
         <el-table-column prop="orderCode" label="订单编号" align="center" />
         <el-table-column prop="materialCode" label="物料编码" align="center" />

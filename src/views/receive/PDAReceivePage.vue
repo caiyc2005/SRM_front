@@ -242,23 +242,31 @@ async function handleSearch() {
         expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
         createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
         status: String(item.status ?? 0),
-        materials: (item.details || []).map((dd, i) => ({
-          index: i + 1,
-          materialCode: dd.materialCode,
-          materialName: dd.materialName || '',
-          spec: dd.spec || '',
-          unit: dd.unit || '',
-          quantity: dd.quantity,
-          historyReceived: dd.receivedQty || 0,
-          remaining: Math.max(0, dd.quantity - (dd.receivedQty || 0)),
-          receivedQty: 0,
-          remark: ''
-        }))
+        materials: (item.details || [])
+          .filter(dd => (dd.receivedQty || 0) < dd.quantity)
+          .map((dd, i) => ({
+            index: i + 1,
+            materialCode: dd.materialCode,
+            materialName: dd.materialName || '',
+            spec: dd.spec || '',
+            unit: dd.unit || '',
+            quantity: dd.quantity,
+            historyReceived: dd.receivedQty || 0,
+            remaining: Math.max(0, dd.quantity - (dd.receivedQty || 0)),
+            receivedQty: 0,
+            remark: ''
+          }))
       }
       receiveFormItems.value = foundDelivery.value.materials.map(m => ({
         ...m,
         receivedQty: m.remaining
       }))
+      if (receiveFormItems.value.length === 0) {
+        ElMessage.warning('该送货单所有物料已全部收完，不可重复收料')
+        foundDelivery.value = null
+        receiveFormItems.value = []
+        submitted.value = false
+      }
       return
     }
     notFound.value = true

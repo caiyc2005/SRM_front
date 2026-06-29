@@ -83,7 +83,8 @@ const routes = [
     path: '/ship',
     name: 'Ship',
     component: ShipPage,
-    meta: { roles: ['供应商', '管理员', 'admin','supplier'], title: '供应商发货' }
+    // meta: { roles: ['供应商', '管理员', 'admin','supplier'], title: '供应商发货' }
+    meta: { roles: [], title: '供应商发货' }
   },
   {
     path: '/supplier',
