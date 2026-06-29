@@ -579,7 +579,7 @@ async function handleConfirmDetail(row) {
     const res = await fetch(`${API_BASE}/ConfirmOrderDetail`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ orderDetailID: row.orderDetailID })
+      body: JSON.stringify({ orderDetailIDs: [row.orderDetailID] })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
@@ -593,6 +593,42 @@ async function handleConfirmDetail(row) {
   } catch {
     ElMessage.error('确认失败，后端不可用')
   }
+}
+
+/** 批量确认采购明细 */
+async function handleBatchConfirm(rows) {
+  if (!rows || rows.length === 0) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确认要批量确认 ${rows.length} 条采购明细吗？确认后将不可撤回。`,
+      '批量确认操作',
+      { type: 'warning', confirmButtonText: '确认批量确认' }
+    )
+  } catch { return }
+
+  const token = localStorage.getItem('token')
+  const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {}
+
+  try {
+    const res = await fetch(`${API_BASE}/ConfirmOrderDetail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ orderDetailIDs: rows.map(r => r.orderDetailID) })
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+
+    if (result.success || result.code === 200) {
+      ElMessage.success(`确认成功，共 ${rows.length} 条`)
+    } else {
+      ElMessage.warning(result.message || `确认完成，部分明细确认失败`)
+    }
+  } catch {
+    ElMessage.error('确认失败，后端不可用')
+  }
+  if (orderTableRef.value) orderTableRef.value.clearSelection()
+  await loadOrders()
 }
 
 async function handleBatchDelivery(rows) {
@@ -776,6 +812,7 @@ watch(() => route.path, () => {
           @confirm-detail="handleConfirmDetail"
           @generate-delivery="handleGenerateDelivery"
           @batch-delivery="handleBatchDelivery"
+          @batch-confirm="handleBatchConfirm"
         />
       </div>
     </div>

@@ -17,13 +17,12 @@ const props = defineProps({
   detailAction: { type: String, default: 'confirm' }
 })
 
-const emit = defineEmits(['pageChange', 'confirm', 'confirmDetail', 'generateDelivery', 'batchDelivery'])
+const emit = defineEmits(['pageChange', 'confirm', 'confirmDetail', 'generateDelivery', 'batchDelivery', 'batchConfirm'])
 
 const tableRef = ref(null)
 const selectedRows = ref([])
 
 function onSelectionChange(rows) {
-  if (props.detailAction !== 'delivery') return
   selectedRows.value = rows
 }
 
@@ -32,11 +31,22 @@ function handleBatchDelivery() {
   emit('batchDelivery', [...selectedRows.value])
 }
 
+function handleBatchConfirm() {
+  if (selectedRows.value.length === 0) return
+  emit('batchConfirm', [...selectedRows.value])
+}
+
 function handleRowClick(row) {
   if (!tableRef.value) return
   // 待发货模式：点击行切换选中（已生成送货单的不可选中）
   if (props.detailAction === 'delivery') {
     if (row.detailStatus === '2') return
+    tableRef.value.toggleRowSelection(row)
+    return
+  }
+  // 确认明细模式：点击行切换选中（已确认的不可选中）
+  if (props.detailAction === 'confirm') {
+    if (row.detailStatus !== '0') return
     tableRef.value.toggleRowSelection(row)
     return
   }
@@ -55,6 +65,10 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
           :disabled="selectedRows.length === 0" @click="handleBatchDelivery">
           生成送货单 ({{ selectedRows.length }})
         </el-button>
+        <el-button v-if="detailMode && detailAction === 'confirm'" type="primary" size="small"
+          :disabled="selectedRows.length === 0" @click="handleBatchConfirm">
+          确认采购明细 ({{ selectedRows.length }})
+        </el-button>
         <span style="margin-left: 10px;">共 {{ total }} 条记录</span>
       </span>
     </div>
@@ -64,8 +78,8 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
       style="width: 100%" show-overflow-tooltip
       @row-click="handleRowClick"
       @selection-change="onSelectionChange">
-      <el-table-column v-if="detailAction === 'delivery'" type="selection" width="40" align="center"
-        :selectable="(row) => row.detailStatus !== '2'" />
+      <el-table-column v-if="detailAction === 'delivery' || detailAction === 'confirm'" type="selection" width="40" align="center"
+        :selectable="(row) => row.detailStatus === '0'" />
       <el-table-column prop="orderCode" label="订单编号" min-width="120" align="center" />
       <el-table-column v-if="!isSupplier" prop="supplierName" label="供应商名称" min-width="110" align="center" />
       <el-table-column prop="materialCode" label="物料编码" min-width="100" align="center" />
