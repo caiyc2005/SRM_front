@@ -148,7 +148,11 @@ onMounted(() => { loadRoles(); loadUsers(); loadUserRoles() })
             <el-button type="primary" @click="openAddRole"><el-icon><Plus /></el-icon> 添加角色</el-button>
           </div>
           <el-table :data="roles" v-loading="roleLoading" stripe border style="width: 100%">
-            <el-table-column prop="roleName" label="角色名称" min-width="160" />
+            <el-table-column label="角色名称" min-width="160">
+              <template #default="{ row }">
+                <span>{{ row.memo || row.roleName }}<span v-if="row.memo" style="color:#999;margin-left:6px;font-size:12px;">({{ row.roleName }})</span></span>
+              </template>
+            </el-table-column>
             <el-table-column label="状态" width="80" align="center">
               <template #default="{ row }"><el-tag :type="row.isDel ? 'danger' : 'success'" size="small">{{ row.isDel ? '禁用' : '启用' }}</el-tag></template>
             </el-table-column>

@@ -67,6 +67,7 @@ function openEditUser(row) {
 async function submitUser() {
   if (!userForm.userCode.trim()) { ElMessage.warning('账号不能为空'); return }
   if (!userForm.userName.trim()) { ElMessage.warning('昵称不能为空'); return }
+  if (!userForm.memo.trim()) { ElMessage.warning('中文名不能为空'); return }
   if (!isEditUser.value && !userForm.password.trim()) { ElMessage.warning('密码不能为空'); return }
   try {
     const body = { userID: userForm.userID, userCode: userForm.userCode, userName: userForm.userName, memo: userForm.memo }
@@ -139,7 +140,7 @@ function getUserRoleIds(userId) {
 
 function getRoleName(roleId) {
   const r = roles.value.find(item => (item.roleId || item.roleID) === roleId)
-  return r ? r.roleName : roleId
+  return r ? (r.memo || r.roleName) : roleId
 }
 
 function openAssignDialog(user) {
@@ -234,7 +235,7 @@ onMounted(() => { loadUsers(); loadRoles(); loadUserRoles() })
         <el-form-item :label="isEditUser ? '新密码' : '密码'" :required="!isEditUser">
           <el-input v-model="userForm.password" type="password" :placeholder="isEditUser ? '留空则不修改' : '请输入密码'" show-password />
         </el-form-item>
-        <el-form-item label="备注"><el-input v-model="userForm.memo" type="textarea" :rows="3" placeholder="可选备注信息" /></el-form-item>
+        <el-form-item label="中文名" required><el-input v-model="userForm.memo" placeholder="请输入中文名" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="userFormVisible = false">取消</el-button>
@@ -246,9 +247,8 @@ onMounted(() => { loadUsers(); loadRoles(); loadUserRoles() })
       <p style="margin-bottom: 16px; color: #333;">为 <strong>{{ assignTargetUser?.userName }}</strong> 分配角色：</p>
       <el-checkbox-group v-model="checkedRoles">
         <el-checkbox v-for="r in roles" :key="r.roleId || r.roleID" :label="r.roleId || r.roleID" :disabled="r.isDel" style="display: flex; margin-bottom: 10px;">
-          {{ r.roleName }}
+          <span>{{ r.memo || r.roleName }}<span v-if="r.memo" style="color:#999;margin-left:4px;font-size:12px;">({{ r.roleName }})</span></span>
           <el-tag v-if="r.isDel" size="small" type="danger" style="margin-left: 8px;">已停用</el-tag>
-          <span v-if="!r.isDel && r.memo" style="color: #999; margin-left: 8px; font-size: 12px;">（{{ r.memo }}）</span>
         </el-checkbox>
       </el-checkbox-group>
       <p v-if="roles.length === 0" style="color: #999; text-align: center;">暂无可用角色，请先添加角色</p>
