@@ -22,17 +22,15 @@ async function loadLogs() {
   loading.value = true
   try {
     const token = localStorage.getItem('token')
+    const queryDto = { pageIndex: query.pageNum, pageSize: query.pageSize }
+    if (query.userCode) queryDto.userCode = query.userCode
+    if (query.userName) queryDto.userName = query.userName
+    if (query.startTime) queryDto.startTime = query.startTime
+    if (query.endTime) queryDto.endTime = query.endTime
     const res = await fetch('/api/Login/GetLoginLogs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-      body: JSON.stringify({
-        userCode: query.userCode || undefined,
-        userName: query.userName || undefined,
-        startTime: query.startTime || undefined,
-        endTime: query.endTime || undefined,
-        pageIndex: query.pageNum,
-        pageSize: query.pageSize
-      })
+      body: JSON.stringify({ queryDto })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
