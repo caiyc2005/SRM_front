@@ -135,7 +135,7 @@ const menuItems = [
     key: 'cargo',
     label: '🏭 货物管理  ',
     children: [
-      { key: 'ship', label: '供应商发货', path: '/ship' },
+      // { key: 'ship', label: '供应商发货', path: '/ship' },
       { key: 'receive', label: '收料入库', path: '/receive' },
       { key: 'receive-pda', label: 'PDA收料', path: '/receive/pda' }
     ]
@@ -191,7 +191,7 @@ watch(() => route.path, () => {
 
 <template>
   <div class="sidebar">
-    <div class="logo">SRM管理系统</div>
+    <div class="logo" style="cursor:pointer;" @click="router.push('/welcome')">SRM管理系统</div>
     <template v-for="item in visibleMenuItems" :key="item.key">
       <!-- 有子菜单的父项 -->
       <template v-if="item.children">

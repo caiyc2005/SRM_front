@@ -37,7 +37,7 @@ function handleLogout() {
 }
 
 function handleProfile() {
-  // 个人中心暂不实现
+  router.push('/profile')
 }
 </script>
 
@@ -49,7 +49,7 @@ function handleProfile() {
     </span>
     <template #dropdown>
       <el-dropdown-menu>
-        <el-dropdown-item :disabled="true" @click="handleProfile">
+        <el-dropdown-item @click="handleProfile">
           <el-icon><User /></el-icon> 个人中心
         </el-dropdown-item>
         <el-dropdown-item divided @click="handleLogout">

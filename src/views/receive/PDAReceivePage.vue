@@ -104,6 +104,8 @@ async function loadPendingOrders() {
     if (result.code === 200 && result.data?.items?.length) {
       pendingOrders.value = result.data.items
         .filter(item => {
+          // 已收货的不在待收列表显示
+          if (String(item.status ?? 0) === '2') return false
           // 过滤掉已全部收完的（无明细时保留，视为可收料）
           const hasDetails = item.details && item.details.length > 0
           if (!hasDetails) return true
@@ -444,7 +446,8 @@ async function handleSubmit() {
 
     if (result.code === 200) {
       ElMessage.success('收货确认成功！')
-      submitted.value = true
+      handleClearSearch()
+      loadPendingOrders()
       return
     }
     ElMessageBox.alert(result.message || '收货失败', '收料失败', {

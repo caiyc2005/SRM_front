@@ -36,17 +36,15 @@ function handleBatchConfirm() {
   emit('batchConfirm', [...selectedRows.value])
 }
 
-function handleRowClick(row) {
+function handleRowClick(row, column, event) {
   if (!tableRef.value) return
-  // 待发货模式：点击行切换选中（已生成送货单的不可选中）
-  if (props.detailAction === 'delivery') {
-    if (row.detailStatus === '2') return
-    tableRef.value.toggleRowSelection(row)
-    return
-  }
-  // 确认明细模式：点击行切换选中（已确认的不可选中）
-  if (props.detailAction === 'confirm') {
-    if (row.detailStatus !== '0') return
+  // 有选择框的模式：点击行也切换选中（但排除点击复选框本身，避免双重切换）
+  if (props.detailAction === 'delivery' || props.detailAction === 'confirm') {
+    // 如果点击的是复选框内部，不处理（Element Plus 已处理）
+    if (event?.target?.closest('.el-checkbox')) return
+    // 已生成送货单或已确认的不可选中
+    if (props.detailAction === 'delivery' && row.detailStatus === '2') return
+    if (props.detailAction === 'confirm' && row.detailStatus !== '0') return
     tableRef.value.toggleRowSelection(row)
     return
   }
@@ -63,7 +61,7 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
       <span>
         <el-button v-if="detailMode && detailAction === 'delivery'" type="success" size="small"
           :disabled="selectedRows.length === 0" @click="handleBatchDelivery">
-          生成送货单 ({{ selectedRows.length }})
+          生成送货单并发货 ({{ selectedRows.length }})
         </el-button>
         <el-button v-if="detailMode && detailAction === 'confirm'" type="primary" size="small"
           :disabled="selectedRows.length === 0" @click="handleBatchConfirm">
@@ -79,7 +77,7 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
       @row-click="handleRowClick"
       @selection-change="onSelectionChange">
       <el-table-column v-if="detailAction === 'delivery' || detailAction === 'confirm'" type="selection" width="40" align="center"
-        :selectable="(row) => row.detailStatus === '0'" />
+        :selectable="(row) => detailAction === 'confirm' ? row.detailStatus === '0' : row.detailStatus !== '2'" />
       <el-table-column prop="orderCode" label="订单编号" min-width="120" align="center" />
       <el-table-column v-if="!isSupplier" prop="supplierName" label="供应商名称" min-width="110" align="center" />
       <el-table-column prop="materialCode" label="物料编码" min-width="100" align="center" />

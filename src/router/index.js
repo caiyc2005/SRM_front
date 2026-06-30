@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '@/views/Login.vue'
+import Welcome from '@/views/Welcome.vue'
 import OrderPage from '@/views/order/OrderPage.vue'
 import DeliveryPage from '@/views/delivery/DeliveryPage.vue'
 import ShipPage from '@/views/ship/ShipPage.vue'
@@ -15,6 +16,7 @@ import DeliveryPrintListPage from '@/views/delivery/DeliveryPrintListPage.vue'
 import DeliveryDetailPage from '@/views/delivery/DeliveryDetailPage.vue'
 import PDAReceivePage from '@/views/receive/PDAReceivePage.vue'
 import SupplierUserPage from '@/views/supplier/SupplierUserPage.vue'
+import ProfilePage from '@/views/ProfilePage.vue'
 
 /**
  * 角色-页面访问配置
@@ -26,12 +28,18 @@ import SupplierUserPage from '@/views/supplier/SupplierUserPage.vue'
 const routes = [
   {
     path: '/',
-    redirect: '/login'
+    redirect: '/welcome'
   },
   {
     path: '/login',
     name: 'Login',
     component: Login
+  },
+  {
+    path: '/welcome',
+    name: 'Welcome',
+    component: Welcome,
+    meta: { title: '首页' }
   },
   {
     path: '/order',
@@ -110,6 +118,12 @@ const routes = [
     meta: { roles: ['whclerk', '仓管员', '管理员', 'admin'], title: 'PDA收料' }
   },
   // ========== 基础信息 ==========
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: ProfilePage,
+    meta: { title: '个人信息' }
+  },
   {
     path: '/basic/user',
     name: 'UserManagement',

@@ -111,7 +111,7 @@ const handleLogin = async () => {
       if (result.user?.roles) {
         localStorage.setItem('userRoles', JSON.stringify(result.user.roles))
       }
-      router.push('/order')
+      router.push('/welcome')
     } else {
       alert(result.message || '账号或密码错误')
     }
