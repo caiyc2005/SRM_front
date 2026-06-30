@@ -12,8 +12,7 @@ const total = ref(0)
 const query = reactive({
   userCode: '',
   userName: '',
-  startTime: '',
-  endTime: '',
+  dateRange: null,
   pageNum: 1,
   pageSize: 20
 })
@@ -25,8 +24,10 @@ async function loadLogs() {
     const queryDto = { pageIndex: query.pageNum, pageSize: query.pageSize }
     if (query.userCode) queryDto.userCode = query.userCode
     if (query.userName) queryDto.userName = query.userName
-    if (query.startTime) queryDto.startTime = query.startTime
-    if (query.endTime) queryDto.endTime = query.endTime
+    if (query.dateRange) {
+      queryDto.startTime = query.dateRange[0]
+      queryDto.endTime = query.dateRange[1]
+    }
     const res = await fetch('/api/Login/GetLoginLogs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
@@ -58,8 +59,7 @@ function handleQuery() {
 function handleReset() {
   query.userCode = ''
   query.userName = ''
-  query.startTime = ''
-  query.endTime = ''
+  query.dateRange = null
   query.pageNum = 1
   loadLogs()
 }
@@ -82,8 +82,7 @@ onMounted(() => {
           <div class="toolbar">
             <el-input v-model="query.userCode" placeholder="账号" clearable style="width:140px" @keyup.enter="handleQuery" />
             <el-input v-model="query.userName" placeholder="姓名" clearable style="width:140px" @keyup.enter="handleQuery" />
-            <el-date-picker v-model="query.startTime" type="datetime" placeholder="开始时间" value-format="YYYY-MM-DD HH:mm:ss" style="width:180px" />
-            <el-date-picker v-model="query.endTime" type="datetime" placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" style="width:180px" />
+            <el-date-picker v-model="query.dateRange" type="datetimerange" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" style="width:360px" />
             <el-button type="primary" @click="handleQuery">查询</el-button>
             <el-button @click="handleReset">重置</el-button>
           </div>
