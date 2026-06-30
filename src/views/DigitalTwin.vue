@@ -35,8 +35,8 @@ async function fetchStats() {
 // ==================== 3D 场景 ====================
 let scene, camera, renderer, animId, particles
 let camTheta = Math.PI * 0.35, camPhi = 1.2, lastFrameTime = 0
-let camDist = 6, dragStartX = 0, mouseNDC = { x: 0, y: 0 }
-const DEF_CAMDIST = 6, DEF_THETA = Math.PI * 0.35, DEF_PHI = 1.2
+let camDist = 8.2, dragStartX = 0, mouseNDC = { x: 0, y: 0 }
+const DEF_CAMDIST = 8.2, DEF_THETA = Math.PI * 0.35, DEF_PHI = 1.2
 let pivotX = 0, pivotY = 0.5, pivotZ = 0
 function resetView() {
   camDist = DEF_CAMDIST; camTheta = DEF_THETA; camPhi = DEF_PHI
