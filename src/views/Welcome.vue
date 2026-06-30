@@ -12,6 +12,7 @@ const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
 const userName = userInfo.userName || '用户'
 const currentTime = ref('')
 const weekDays = ['日', '一', '二', '三', '四', '五', '六']
+const roleDisplay = ref('')
 
 // 获取当前角色（一个用户可能有多个角色，取当前活跃的）
 const currentRole = (() => {
@@ -21,6 +22,25 @@ const currentRole = (() => {
   }
   return ''
 })()
+
+// 从数据库查询角色中文名（memo）
+async function loadRoleDisplay() {
+  if (!currentRole) return
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch('/api/User/GetRoles', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+    const text = await res.text()
+    const result = text ? JSON.parse(text) : {}
+    if (result.success && result.data) {
+      const found = result.data.find(r => r.roleName === currentRole)
+      roleDisplay.value = found?.memo || currentRole
+    }
+  } catch {
+    roleDisplay.value = currentRole
+  }
+}
 
 /** 根据路由 meta.roles 判断当前角色是否有权限访问 */
 function hasAccess(path) {
@@ -44,6 +64,7 @@ function updateTime() {
 onMounted(() => {
   updateTime()
   setInterval(updateTime, 1000)
+  loadRoleDisplay()
 })
 </script>
 
@@ -72,6 +93,7 @@ onMounted(() => {
             <p class="welcome-subtitle">高效的供应链管理平台，帮助您轻松管理采购、送货与收料全流程</p>
             <div class="welcome-time">{{ currentTime }}</div>
             <div class="welcome-user">您好，{{ userName }}</div>
+            <div class="welcome-role">您当前登录的用户角色是：<strong>{{ roleDisplay }}</strong></div>
           </div>
 
           <div class="feature-grid">
@@ -149,6 +171,7 @@ onMounted(() => {
 .welcome-subtitle { font-size: 15px; opacity: 0.85; margin: 0 0 24px; }
 .welcome-time { font-size: 16px; opacity: 0.9; margin-bottom: 8px; font-family: monospace; }
 .welcome-user { font-size: 18px; font-weight: 600; opacity: 0.95; }
+.welcome-role { font-size: 14px; opacity: 0.8; margin-top: 8px; }
 
 .feature-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;
