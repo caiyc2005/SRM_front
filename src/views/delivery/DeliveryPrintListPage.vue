@@ -47,8 +47,9 @@ const total = ref(0)
 // 筛选字段配置
 const deliveryStatusOptions = [
   { label: '全部', value: 'all' },
-  { label: '未收货', value: '0' },
-  { label: '已收货', value: '1' }
+  { label: '未发货', value: '0' },
+  { label: '已发货', value: '1' },
+  { label: '已收货', value: '2' }
 ]
 
 // 当前用户角色
@@ -85,7 +86,7 @@ async function loadDeliveries() {
         noteCode: query.noteCode || undefined,
         orderCode: query.orderCode || undefined,
         supplierId: query.supplierId || undefined,
-        status: query.status && query.status !== 'all' ? (query.status === '1') : undefined,
+        status: query.status && query.status !== 'all' ? query.status : undefined,
         page: query.pageNum,
         pageSize: query.pageSize
       })
