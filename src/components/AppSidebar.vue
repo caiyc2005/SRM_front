@@ -239,9 +239,13 @@ watch(() => route.path, () => {
 <style scoped>
 .sidebar {
   width: 220px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  flex-shrink: 0;
   background: #001529;
   color: #fff;
-  flex-shrink: 0;
+  overflow-y: auto;
 }
 .logo {
   height: 60px;

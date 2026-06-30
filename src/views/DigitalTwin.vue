@@ -522,10 +522,10 @@ onBeforeUnmount(() => {
 </style>
 
 <style scoped>
-.layout{display:flex;min-height:100vh}
+.layout{display:flex;height:100vh;overflow:hidden}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.header{height:60px;background:#fff;padding:0 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee}
-.content{padding:20px;flex:1;overflow-y:auto;background:#f0f4f8}
+.header{height:60px;flex-shrink:0;background:#fff;padding:0 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee}
+.content{padding:20px;flex:1;overflow-y:auto;overflow-x:hidden;background:#f0f4f8}
 .panel-3d{background:#050a15;border-radius:8px;overflow:hidden;border:1px solid #0d2a4a;box-shadow:0 0 30px rgba(0,100,200,.1),0 2px 16px rgba(0,0,0,.5);user-select:none;-webkit-user-select:none}
 .panel-3d-head{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid #0d2a4a;background:#080e1a;user-select:none;-webkit-user-select:none}
 .panel-3d-title{font-size:16px;font-weight:600;color:#00ddff;letter-spacing:2px;text-shadow:0 0 10px rgba(0,220,255,.3)}

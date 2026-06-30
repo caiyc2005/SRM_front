@@ -158,14 +158,14 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
         </template>
       </el-table-column>
 
-      <el-table-column prop="orderCode" label="订单编号" width="160" align="center" resizable="false" />
-      <el-table-column v-if="!isSupplier" prop="supplierName" label="供应商名称" min-width="180" align="center" resizable="false" />
+      <el-table-column prop="orderCode" label="订单编号" min-width="140" align="center" resizable="false" />
+      <el-table-column v-if="!isSupplier" prop="supplierName" label="供应商名称" min-width="150" align="center" resizable="false" />
 
-      <el-table-column prop="materialCount" label="物料种类" width="90" align="center" resizable="false" />
-      <el-table-column prop="totalAmount" label="总金额(元)" width="130" align="center" class-name="red-price" resizable="false" />
-      <el-table-column prop="createTime" label="创建时间" width="160" align="center" resizable="false" />
+      <el-table-column prop="materialCount" label="物料种类" min-width="80" align="center" resizable="false" />
+      <el-table-column prop="totalAmount" label="总金额(元)" min-width="120" align="center" class-name="red-price" resizable="false" />
+      <el-table-column prop="createTime" label="创建时间" min-width="140" align="center" resizable="false" />
       <!-- 订单状态 -->
-      <el-table-column v-if="!hideStatus" label="订单状态" width="100" align="center" resizable="false">
+      <el-table-column v-if="!hideStatus" label="订单状态" min-width="80" align="center" resizable="false">
         <template #default="scope">
           <el-tag :type="getStatusTag(scope.row.status)" size="small">
             {{ getStatusText(scope.row.status) }}
@@ -174,7 +174,7 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
       </el-table-column>
 
       <!-- 操作列 -->
-      <el-table-column v-if="actionType !== 'none'" label="操作" width="140" align="center" resizable="false">
+      <el-table-column v-if="actionType !== 'none'" label="操作" min-width="110" align="center" resizable="false">
         <template #default="scope">
           <template v-if="scope.row.status === '0'">
             <!-- 状态为0：表示未确认的订单 -->

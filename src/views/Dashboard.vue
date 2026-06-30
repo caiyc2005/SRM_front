@@ -201,10 +201,10 @@ onBeforeUnmount(()=>{
 </template>
 
 <style scoped>
-.layout{display:flex;min-height:100vh}
+.layout{display:flex;height:100vh;overflow:hidden}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.header{height:60px;background:#fff;padding:0 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee}
-.content{padding:20px;flex:1;overflow-y:auto;background:#f0f4f8}
+.header{height:60px;flex-shrink:0;background:#fff;padding:0 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee}
+.content{padding:20px;flex:1;overflow-y:auto;overflow-x:hidden;background:#f0f4f8}
 
 .banner{background:linear-gradient(135deg,#2b7af0,#1a5cc8);border-radius:12px;padding:28px 32px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;color:#fff;box-shadow:0 4px 16px rgba(43,122,240,.3)}
 .b-title{font-size:22px;font-weight:700;margin:0 0 4px;letter-spacing:1px}

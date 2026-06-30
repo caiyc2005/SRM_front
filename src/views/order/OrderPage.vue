@@ -900,10 +900,10 @@ watch(() => route.path, () => {
 </template>
 
 <style scoped>
-.layout { display: flex; min-height: 100vh; }
-.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.header { height: 60px; background: #fff; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
-.content { padding: 20px; flex: 1; overflow-y: auto; }
+.layout { display: flex; height: 100vh; overflow: hidden; }
+.main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+.header { height: 60px; flex-shrink: 0; background: #fff; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
+.content { padding: 20px; flex: 1; min-width: 0; }
 </style>
 <style>
 .delivery-qty-col .el-input-number .el-input__inner {
