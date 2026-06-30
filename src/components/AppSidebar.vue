@@ -99,6 +99,11 @@ onMounted(() => {
 
 const menuItems = [
   {
+    key: 'dashboard',
+    label: '📊 统计看板',
+    path: '/dashboard'
+  },
+  {
     key: 'basic',
     label: '📋 基础信息',
     children: [

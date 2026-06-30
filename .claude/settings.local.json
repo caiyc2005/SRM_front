@@ -6,7 +6,18 @@
       "Bash(python -c ' *)",
       "Bash(python -c \"open\\(r'd:/SRM/frontend/src/views/supplier/SupplierPage.vue', 'r', encoding='utf-8'\\).read\\(\\)\")",
       "Bash(python d:/SRM/frontend/fix_supplier.py)",
-      "Bash(python)"
+      "Bash(python)",
+      "Bash(npx vite *)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(curl -s http://localhost:5173/src/views/Dashboard.vue)",
+      "Bash(kill %1)",
+      "Bash(kill %2)",
+      "Bash(curl -s http://localhost:5175/src/views/Dashboard.vue)",
+      "Bash(curl -s http://localhost:5180/src/views/Dashboard.vue)",
+      "Bash(curl -s http://localhost:5190/src/views/Dashboard.vue)",
+      "Bash(curl -s http://localhost:5195/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5195/src/views/Dashboard.vue)",
+      "Bash(curl -s http://localhost:5195/src/views/Dashboard.vue)"
     ],
     "additionalDirectories": [
       "d:\\SRM\\frontend\\src\\views",
