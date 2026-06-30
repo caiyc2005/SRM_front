@@ -17,6 +17,7 @@ import DeliveryDetailPage from '@/views/delivery/DeliveryDetailPage.vue'
 import PDAReceivePage from '@/views/receive/PDAReceivePage.vue'
 import SupplierUserPage from '@/views/supplier/SupplierUserPage.vue'
 import ProfilePage from '@/views/ProfilePage.vue'
+import Dashboard from '@/views/Dashboard.vue'
 
 /**
  * 角色-页面访问配置
@@ -40,6 +41,12 @@ const routes = [
     name: 'Welcome',
     component: Welcome,
     meta: { title: '首页' }
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: Dashboard,
+    meta: { roles: ['管理员', 'admin'], title: '统计看板' }
   },
   {
     path: '/order',
