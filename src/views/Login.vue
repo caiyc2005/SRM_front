@@ -113,7 +113,12 @@ const handleLogin = async () => {
         const rawRoles = result.user.roles
         const roles = rawRoles.map(r => (typeof r === 'object' ? (r.roleName || r.name || r) : r))
         const hasAdmin = roles.some(r => r === 'admin' || r === '管理员')
-        localStorage.setItem('userRoles', JSON.stringify(hasAdmin ? ['admin'] : roles))
+        const activeRoles = hasAdmin ? ['admin'] : roles
+        localStorage.setItem('userRoles', JSON.stringify(activeRoles))
+        // whclerk/仓管员 → 直接跳转到 PDA 收料页面
+        if (activeRoles.some(r => r === 'whclerk' || r === '仓管员')) {
+          return router.push('/receive/pda')
+        }
       }
       router.push('/welcome')
     } else {

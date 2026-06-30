@@ -74,7 +74,7 @@ const routes = [
     path: '/order/pending-delivery',
     name: 'OrderPendingDelivery',
     component: OrderPage,
-    meta: { roles: ['采购员', '管理员', 'admin','supplier', 'supplier'], title: '生成送货单' }
+    meta: { roles: ['采购员', '管理员', 'admin','supplier', 'supplier','purchase'], title: '生成送货单' }
   },
   {
     path: '/order/query',

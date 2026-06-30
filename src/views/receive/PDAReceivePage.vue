@@ -6,6 +6,7 @@
  * 样式参考移动端卡片式布局，API 与收料操作一致
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 
@@ -26,7 +27,19 @@ const selectedWareID = ref('')
 const fieldErrors = ref({})
 const submitting = ref(false)
 const submitted = ref(false)
+const router = useRouter()
 const userName = ref('')
+
+function handleLogout() {
+  ElMessageBox.confirm('确认要退出登录吗？', '退出登录', {
+    type: 'info', confirmButtonText: '确认退出', cancelButtonText: '取消'
+  }).then(() => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('userInfo')
+    localStorage.removeItem('userRoles')
+    router.push('/login')
+  }).catch(() => {})
+}
 
 // 待收订单
 const pendingOrders = ref([])
@@ -643,6 +656,7 @@ onMounted(() => {
           <span class="operator-card__label">操作员</span>
           <span class="operator-card__name">{{ userName || '—' }}</span>
         </div>
+        <button class="header-btn" @click="handleLogout">退出</button>
       </div>
     </header>
 

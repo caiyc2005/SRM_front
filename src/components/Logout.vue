@@ -75,7 +75,8 @@ function handleSwitchRole(role) {
     { type: 'info', confirmButtonText: '确认切换', cancelButtonText: '取消' }
   ).then(() => {
     localStorage.setItem('userRoles', JSON.stringify([role]))
-    window.location.href = '/welcome'
+    const target = (role === 'whclerk' || role === '仓管员') ? '/receive/pda' : '/welcome'
+    window.location.href = target
   }).catch(() => {})
 }
 
