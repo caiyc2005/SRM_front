@@ -13,6 +13,22 @@ const userName = userInfo.userName || '用户'
 const currentTime = ref('')
 const weekDays = ['日', '一', '二', '三', '四', '五', '六']
 
+// 获取当前角色（一个用户可能有多个角色，取当前活跃的）
+const currentRole = (() => {
+  const stored = localStorage.getItem('userRoles')
+  if (stored) {
+    try { return JSON.parse(stored)[0] || '' } catch {}
+  }
+  return ''
+})()
+
+/** 根据路由 meta.roles 判断当前角色是否有权限访问 */
+function hasAccess(path) {
+  const route = router.getRoutes().find(r => r.path === path)
+  if (!route || !route.meta?.roles || route.meta.roles.length === 0) return true
+  return route.meta.roles.includes(currentRole)
+}
+
 function updateTime() {
   const now = new Date()
   const y = now.getFullYear()
@@ -59,7 +75,7 @@ onMounted(() => {
           </div>
 
           <div class="feature-grid">
-            <div class="feature-card" @click="router.push('/order/query')">
+            <div class="feature-card" v-if="hasAccess('/order/query')" @click="router.push('/order/query')">
               <div class="feature-icon" style="background:#ecf5ff;">
                 <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="#409eff" stroke-width="2" stroke-linecap="round">
                   <path d="M4 8h20M4 14h20M4 20h20"/>
@@ -70,7 +86,7 @@ onMounted(() => {
               <div class="feature-desc">查看所有采购订单及状态</div>
             </div>
 
-            <div class="feature-card" @click="router.push('/order/create')">
+            <div class="feature-card" v-if="hasAccess('/order/create')" @click="router.push('/order/create')">
               <div class="feature-icon" style="background:#f0f9eb;">
                 <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="#67c23a" stroke-width="2" stroke-linecap="round">
                   <line x1="14" y1="6" x2="14" y2="22"/>
@@ -82,7 +98,7 @@ onMounted(() => {
               <div class="feature-desc">新增采购订单</div>
             </div>
 
-            <div class="feature-card" @click="router.push('/delivery')">
+            <div class="feature-card" v-if="hasAccess('/delivery')" @click="router.push('/delivery')">
               <div class="feature-icon" style="background:#fef0f0;">
                 <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="#f56c6c" stroke-width="2" stroke-linecap="round">
                   <rect x="4" y="10" width="16" height="12" rx="2"/>
@@ -96,7 +112,7 @@ onMounted(() => {
               <div class="feature-desc">查询送货单及收货状态</div>
             </div>
 
-            <div class="feature-card" @click="router.push('/receive')">
+            <div class="feature-card" v-if="hasAccess('/receive')" @click="router.push('/receive')">
               <div class="feature-icon" style="background:#fdf6ec;">
                 <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="#e6a23c" stroke-width="2" stroke-linecap="round">
                   <path d="M6 14l4 4 12-12"/>
