@@ -692,12 +692,20 @@ async function handleGenerateDelivery(row) {
 // ============ 送货数量弹窗 ============
 const deliveryQtyVisible = ref(false)
 const deliveryQtyItems = ref([])
+const expectedDate = ref('')
+
+function disabledDate(time) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return time.getTime() < today.getTime()
+}
 
 function openDeliveryQtyDialog(rows) {
   deliveryQtyItems.value = rows.map(r => ({
     ...r,
     deliveryQty: r.availableQty // 默认等于可发货最大数量
   }))
+  expectedDate.value = ''
   deliveryQtyVisible.value = true
 }
 
@@ -726,6 +734,7 @@ async function confirmDeliveryWithQty() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
       body: JSON.stringify({
+        expectedDate: expectedDate.value || undefined,
         items: validItems.map(r => ({
           orderDetailID: r.orderDetailID,
           orderCode: r.orderCode,
@@ -829,9 +838,22 @@ watch(() => route.path, () => {
     />
 
     <!-- 送货数量输入弹窗 -->
-    <el-dialog v-model="deliveryQtyVisible" title="填写送货数量" width="800px" align-center>
-      <div style="margin-bottom: 12px; font-size: 13px; color: #666;">
-        送货数量默认等于可发货最大数量，可修改为更小值支持分批送货。
+    <el-dialog v-model="deliveryQtyVisible" title="生成送货单并发货" width="800px" align-center>
+      <div style="margin-bottom: 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <span style="font-size: 13px; color: #666;">
+          送货数量默认等于可发货最大数量，可修改为更小值支持分批送货。
+        </span>
+        <span style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:13px; color:#555;">
+          <b>预计送达时间：</b>
+          <el-date-picker
+            v-model="expectedDate"
+            type="date"
+            placeholder="请选择"
+            value-format="YYYY-MM-DD"
+            style="width:160px"
+            :disabled-date="disabledDate"
+          />
+        </span>
       </div>
       <el-table :data="deliveryQtyItems" border size="small" style="width: 100%">
         <el-table-column prop="orderCode" label="订单编号" align="center" />

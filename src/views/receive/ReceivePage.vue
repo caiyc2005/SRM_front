@@ -402,7 +402,8 @@ async function loadReceiveRecords() {
           unit: d.unit || '',
           planQty: d.planQty,
           receivedQty: d.receivedQty,
-          diffQty: d.diffQty
+          diffQty: d.diffQty,
+          orderCode: d.orderCode || r.orderCode || ''
         }))
         return {
           recordId: r.receiveID,
@@ -1115,8 +1116,8 @@ onMounted(() => {
                         <el-table :data="row.items" size="small" border style="width: 100%">
                           <el-table-column type="index" label="序号" width="60" align="center" />
                           <el-table-column label="采购单号" width="160" align="center">
-                            <template #default>
-                              {{ row.orderCode }}
+                            <template #default="{ row: r }">
+                              {{ r.orderCode }}
                             </template>
                           </el-table-column>
                           <el-table-column prop="materialCode" label="物料编码" width="120" align="center" />

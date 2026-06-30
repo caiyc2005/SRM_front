@@ -49,43 +49,43 @@ const routes = [
     path: '/order/pending',
     name: 'OrderPending',
     component: OrderPage,
-    meta: { roles: ['采购员', '管理员', 'admin'], title: '确认采购单' }
+    meta: { roles: ['采购员', '管理员', 'admin','purchase', 'supplier'], title: '确认采购单' }
   },
   {
     path: '/order/pending-delivery',
     name: 'OrderPendingDelivery',
     component: OrderPage,
-    meta: { roles: ['采购员', '管理员', 'admin','supplier'], title: '生成送货单' }
+    meta: { roles: ['采购员', '管理员', 'admin','supplier', 'supplier'], title: '生成送货单' }
   },
   {
     path: '/order/query',
     name: 'OrderQuery',
     component: OrderPage,
-    meta: { roles: ['采购员', '仓管员', '管理员', 'admin'], title: '订单一览表' }
+    meta: { roles: ['采购员', '仓管员', '管理员', 'admin','purchase'], title: '订单一览表' }
   },
   {
     path: '/order/create',
     name: 'CreateOrder',
     component: CreateOrderPage,
-    meta: { roles: ['采购员', '管理员', 'admin'], title: '创建采购单' }
+    meta: { roles: ['采购员', '管理员', 'admin','purchase'], title: '创建采购单' }
   },
   {
     path: '/delivery',
     name: 'Delivery',
     component: DeliveryPage,
-    meta: { roles: ['仓管员', '供应商', '管理员', 'admin'], title: '送货单查询' }
+    meta: { roles: ['仓管员', '供应商', '管理员', 'admin','purchase'], title: '送货单查询' }
   },
   {
     path: '/delivery/details',
     name: 'DeliveryDetails',
     component: DeliveryDetailPage,
-    meta: { roles: ['采购员', '仓管员', '管理员', 'admin', 'supplier'], title: '送货明细查询' }
+    meta: { roles: ['采购员', '仓管员', '管理员', 'admin', 'supplier','purchase'], title: '送货明细查询' }
   },
   {
     path: '/delivery/printlist',
     name: 'DeliveryPrintList',
     component: DeliveryPrintListPage,
-    meta: { roles: ['仓管员', '供应商', '管理员', 'admin','supplier'], title: '打印送货单' }
+    meta: { roles: ['仓管员', '供应商', '管理员', 'admin','supplier','purchase'], title: '打印送货单' }
   },
   {
     path: '/ship',
@@ -106,6 +106,7 @@ const routes = [
     meta: { roles: ['供应商', 'supplier', '采购员', '管理员', 'admin'], title: '供应商子账号管理' }
   },
   {
+    //web收料
     path: '/receive',
     name: 'Receive',
     component: ReceivePage,
