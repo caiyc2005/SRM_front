@@ -110,13 +110,10 @@ const handleLogin = async () => {
       localStorage.setItem('userInfo', JSON.stringify(result.user))
       if (result.user?.roles) {
         // 如果用户有 admin 角色，优先设为当前角色
-        const roles = [...result.user.roles]
-        const adminIdx = roles.findIndex(r => r === 'admin' || r === '管理员')
-        if (adminIdx > 0) {
-          const [admin] = roles.splice(adminIdx, 1)
-          roles.unshift(admin)
-        }
-        localStorage.setItem('userRoles', JSON.stringify(roles))
+        const rawRoles = result.user.roles
+        const roles = rawRoles.map(r => (typeof r === 'object' ? (r.roleName || r.name || r) : r))
+        const hasAdmin = roles.some(r => r === 'admin' || r === '管理员')
+        localStorage.setItem('userRoles', JSON.stringify(hasAdmin ? ['admin'] : roles))
       }
       router.push('/welcome')
     } else {
