@@ -15,6 +15,7 @@ import CreateOrderPage from '@/views/order/CreateOrderPage.vue'
 import DeliveryPrintListPage from '@/views/delivery/DeliveryPrintListPage.vue'
 import DeliveryDetailPage from '@/views/delivery/DeliveryDetailPage.vue'
 import PDAReceivePage from '@/views/receive/PDAReceivePage.vue'
+import LoginLogs from '@/views/basic/LoginLogs.vue'
 import SupplierUserPage from '@/views/supplier/SupplierUserPage.vue'
 import ProfilePage from '@/views/ProfilePage.vue'
 import DashboardMain from '@/views/Dashboard.vue'
@@ -172,6 +173,12 @@ const routes = [
     name: 'Warehouse',
     component: WarehousePage,
     meta: { roles: ['仓管员', '管理员', 'admin'], title: '仓库管理' }
+  },
+  {
+    path: '/basic/login-logs',
+    name: 'LoginLogs',
+    component: LoginLogs,
+    meta: { roles: ['管理员', 'admin'], title: '登录日志' }
   }
 ]
 

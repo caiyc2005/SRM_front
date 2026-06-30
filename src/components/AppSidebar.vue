@@ -116,7 +116,8 @@ const menuItems = [
       { key: 'supplier-users', label: '供应商子账号', path: '/supplier/users' },
       { key: 'material', label: '物料管理', path: '/basic/material' },
       { key: 'inventory', label: '库存查询', path: '/basic/inventory' },
-      { key: 'warehouse', label: '仓库管理', path: '/basic/warehouse' }
+      { key: 'warehouse', label: '仓库管理', path: '/basic/warehouse' },
+      { key: 'login-logs', label: '登录日志', path: '/basic/login-logs' }
     ]
   },
   {
@@ -180,7 +181,7 @@ function toggleExpand(key) {
 }
 
 function handleMenuClick(item) {
-  if (item.path) router.push(item.path)
+  if (item.path) router.push(item.path).catch(() => {})
 }
 
 // 自动展开当前路由对应的父菜单，收起其他所有菜单组
@@ -216,7 +217,7 @@ watch(() => route.path, () => {
           :key="child.key"
           class="menu-item menu-child"
           :class="{ active: activeMenu === child.key }"
-          v-show="expandedKeys.includes(item.key)"
+          v-if="expandedKeys.includes(item.key)"
           @click="handleMenuClick(child)"
         >
           {{ child.label }}
