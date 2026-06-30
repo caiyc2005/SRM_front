@@ -17,7 +17,8 @@ import DeliveryDetailPage from '@/views/delivery/DeliveryDetailPage.vue'
 import PDAReceivePage from '@/views/receive/PDAReceivePage.vue'
 import SupplierUserPage from '@/views/supplier/SupplierUserPage.vue'
 import ProfilePage from '@/views/ProfilePage.vue'
-import Dashboard from '@/views/Dashboard.vue'
+import DashboardMain from '@/views/Dashboard.vue'
+import DigitalTwin from '@/views/DigitalTwin.vue'
 
 /**
  * 角色-页面访问配置
@@ -44,9 +45,19 @@ const routes = [
   },
   {
     path: '/dashboard',
-    name: 'Dashboard',
-    component: Dashboard,
-    meta: { roles: ['管理员', 'admin'], title: '统计看板' }
+    redirect: '/dashboard/main'
+  },
+  {
+    path: '/dashboard/main',
+    name: 'DashboardMain',
+    component: DashboardMain,
+    meta: { roles: ['管理员', 'admin'], title: '主数据看板' }
+  },
+  {
+    path: '/dashboard/twin',
+    name: 'DigitalTwin',
+    component: DigitalTwin,
+    meta: { roles: ['管理员', 'admin'], title: '数字孪生' }
   },
   {
     path: '/order',
@@ -185,6 +196,7 @@ function findFirstAccessibleRoute() {
   const accessible = allRoutes.find(r =>
     r.path !== '/' &&
     r.path !== '/login' &&
+    r.path !== '/dashboard' &&
     r.meta?.roles?.length &&
     r.meta.roles.some(role => userRoles.includes(role))
   )

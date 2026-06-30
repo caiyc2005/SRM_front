@@ -17,7 +17,8 @@
       "Bash(curl -s http://localhost:5190/src/views/Dashboard.vue)",
       "Bash(curl -s http://localhost:5195/)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5195/src/views/Dashboard.vue)",
-      "Bash(curl -s http://localhost:5195/src/views/Dashboard.vue)"
+      "Bash(curl -s http://localhost:5195/src/views/Dashboard.vue)",
+      "Bash(npm install *)"
     ],
     "additionalDirectories": [
       "d:\\SRM\\frontend\\src\\views",

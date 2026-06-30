@@ -101,7 +101,10 @@ const menuItems = [
   {
     key: 'dashboard',
     label: '📊 统计看板',
-    path: '/dashboard'
+    children: [
+      { key: 'dashboard-main', label: '主数据看板', path: '/dashboard/main' },
+      { key: 'dashboard-twin', label: '数字孪生', path: '/dashboard/twin' }
+    ]
   },
   {
     key: 'basic',
