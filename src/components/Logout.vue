@@ -41,6 +41,13 @@ onMounted(async () => {
       const parsed = JSON.parse(userInfo)
       userName.value = parsed.userName || parsed.userCode || '未知用户'
       allRoles.value = Array.isArray(parsed.roles) ? parsed.roles : []
+      // 按指定顺序排列角色
+      const roleOrder = ['admin','管理员','超级管理员','purchase','采购员','supplier','供应商','whclerk','仓管员','仓库管理员']
+      allRoles.value.sort((a, b) => {
+        const ia = roleOrder.indexOf(a)
+        const ib = roleOrder.indexOf(b)
+        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
+      })
     } catch {
       userName.value = '未知用户'
     }
