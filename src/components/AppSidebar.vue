@@ -144,11 +144,15 @@ const menuItems = [
   },
   {
     key: 'cargo',
-    label: '🏭 货物管理  ',
+    label: '🏭 收料管理  ',
     children: [
       // { key: 'ship', label: '供应商发货', path: '/ship' },
+      { key: 'receive-pending', label: '待收料查询', path: '/receive/pending' },
       { key: 'receive', label: '收料入库', path: '/receive' },
-      { key: 'receive-pda', label: 'PDA收料', path: '/receive/pda' }
+      { key: 'receive-pda', label: 'PDA收料', path: '/receive/pda' },
+      { key: 'receive-record', label: '收料记录', path: '/receive/history' },
+      
+      { key: 'receive-detail', label: '收料明细查询', path: '/receive/detail' }
     ]
   },
 

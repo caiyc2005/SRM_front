@@ -23,7 +23,13 @@
       "Bash(sed -i 's/width=\"90\" align=\"center\" resizable=\"false\" \\\\/>$/min-width=\"80\" align=\"center\" resizable=\"false\" \\\\/>/' src/views/order/OrderTable.vue)",
       "Bash(sed -i 's/width=\"130\" align=\"center\" class-name=\"red-price\" resizable=\"false\" \\\\/>$/min-width=\"120\" align=\"center\" class-name=\"red-price\" resizable=\"false\" \\\\/>/' src/views/order/OrderTable.vue)",
       "Bash(sed -i '/label=\"订单状态\"/s/width=\"100\"/min-width=\"80\"/' src/views/order/OrderTable.vue)",
-      "Bash(sed -i '/label=\"操作\"/s/width=\"140\"/min-width=\"110\"/' src/views/order/OrderTable.vue)"
+      "Bash(sed -i '/label=\"操作\"/s/width=\"140\"/min-width=\"110\"/' src/views/order/OrderTable.vue)",
+      "Bash(sed -i '140s/  {/  },/' src/router/index.js)",
+      "Bash(sed -i '145d' src/router/index.js)",
+      "Bash(sed -i '913,914d' src/views/receive/ReceivePage.vue)",
+      "Bash(sed -i '1075d' src/views/receive/ReceivePage.vue)",
+      "Bash(sed -i 's/ReceiveHistoryPage.vue'\"'\"';/ReceiveHistoryPage.vue'\"'\"'/' src/router/index.js)",
+      "Bash(sed -i 's/PendingReceivePage.vue'\"'\"';/PendingReceivePage.vue'\"'\"'/' src/router/index.js)"
     ],
     "additionalDirectories": [
       "d:\\SRM\\frontend\\src\\views",
