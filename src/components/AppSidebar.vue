@@ -108,15 +108,16 @@ const menuItems = [
   },
   {
     key: 'basic',
-    label: '📋 基础信息',
+    label: '📋 基础信息管理',
     children: [
       { key: 'basic-user', label: '用户管理', path: '/basic/user' },
       { key: 'basic-role', label: '角色管理', path: '/basic/role' },
       { key: 'supplier', label: '供应商管理', path: '/supplier' },
       { key: 'supplier-users', label: '供应商子账号', path: '/supplier/users' },
+      { key: 'warehouse', label: '仓库管理', path: '/basic/warehouse' },
       { key: 'material', label: '物料管理', path: '/basic/material' },
       { key: 'inventory', label: '库存查询', path: '/basic/inventory' },
-      { key: 'warehouse', label: '仓库管理', path: '/basic/warehouse' },
+      
       { key: 'login-logs', label: '登录日志', path: '/basic/login-logs' }
     ]
   },
@@ -134,8 +135,9 @@ const menuItems = [
     key: 'delivery',
     label: '🚚 送货单管理 ',
     children: [
+      { key: 'delivery', label: '送货单一览表', path: '/delivery' },
       { key: 'order-pending-delivery', label: '生成送货单', path: '/order/pending-delivery' },
-      { key: 'delivery', label: '送货单查询', path: '/delivery' },
+      
       { key: 'delivery-details', label: '送货明细查询', path: '/delivery/details' },
       { key: 'delivery-print', label: '打印送货单', path: '/delivery/printlist' },
     ]

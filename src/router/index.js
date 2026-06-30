@@ -92,7 +92,7 @@ const routes = [
     path: '/delivery',
     name: 'Delivery',
     component: DeliveryPage,
-    meta: { roles: ['仓管员', '供应商', '管理员', 'admin','purchase'], title: '送货单查询' }
+    meta: { roles: ['仓管员', '供应商', '管理员', 'admin','purchase'], title: '送货单一览表' }
   },
   {
     path: '/delivery/details',
