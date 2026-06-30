@@ -169,9 +169,9 @@ onMounted(() => { loadRoles(); loadUsers(); loadUserRoles() })
       </div>
     </div>
 
-    <el-dialog title="添加角色" v-model="roleFormVisible" width="420px" :close-on-click-modal="false">
+    <el-dialog title="添加角色" v-model="roleFormVisible" width="520px" :close-on-click-modal="false">
       <el-form label-width="80px" label-position="left">
-        <el-form-item label="角色名称（英文）" required><el-input v-model="roleForm.roleName" placeholder="如 admin、purchase" /></el-form-item>
+        <el-form-item label="角色名称" required><el-input v-model="roleForm.roleName" placeholder="如 admin、purchase【建议是英文！】" /></el-form-item>
         <el-form-item label="中文名" required><el-input v-model="roleForm.memo" placeholder="请输入中文名" /></el-form-item>
       </el-form>
       <template #footer>
