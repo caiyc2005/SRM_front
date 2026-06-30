@@ -29,7 +29,7 @@ import Dashboard from '@/views/Dashboard.vue'
 const routes = [
   {
     path: '/',
-    redirect: '/welcome'
+    redirect: '/login'
   },
   {
     path: '/login',

@@ -42,9 +42,8 @@ function tick(){
 
 // ==================== 3D 场景 ====================
 let scene, camera, renderer, animId, particles
-let camTheta=Math.PI*0.35, camPhi=1.15, lastFrameTime=0
-let isDragging=false, dragMoved=false, dragPrevX=0, dragPrevY=0
-let camDist=6, mouseNDC={x:0,y:0}
+let camTheta=Math.PI*0.35, camPhi=1.2, lastFrameTime=0
+let camDist=6, dragStartX=0, mouseNDC={x:0,y:0}
 const DEF_CAMDIST=6, DEF_THETA=Math.PI*0.35, DEF_PHI=1.2
 let pivotX=0, pivotY=0.5, pivotZ=0
 function resetView(){
@@ -99,15 +98,15 @@ async function initThree(){
 
   // 场景
   scene=new T.Scene()
-  scene.background=new T.Color(0x1e3048)
-  scene.fog=new T.FogExp2(0x1e3048,0.0001)
+  scene.background=new T.Color(0x050a15)
+  scene.fog=new T.FogExp2(0x050a15,0.0008)
   camera=new T.PerspectiveCamera(40,w/h,0.3,30)
   renderer=new T.WebGLRenderer({antialias:true})
   renderer.setSize(w,h)
   renderer.setPixelRatio(Math.min(devicePixelRatio,2))
   el.appendChild(renderer.domElement)
 
-  el.style.cursor='grab'
+  el.style.cursor='default'
   el.addEventListener('mousedown',onMouseDown)
   el.addEventListener('mousemove',onMouseMove)
   el.addEventListener('mouseup',onMouseUp)
@@ -116,26 +115,37 @@ async function initThree(){
   el.addEventListener('contextmenu',e=>e.preventDefault())
 
   // 灯光
-  scene.add(new T.AmbientLight(0x556688,4))
-  const d1=new T.DirectionalLight(0x8899cc,3);d1.position.set(5,10,8);scene.add(d1)
-  const d2=new T.DirectionalLight(0x667799,2);d2.position.set(-3,3,-5);scene.add(d2)
+  scene.add(new T.AmbientLight(0x112233,3))
+  const d1=new T.DirectionalLight(0x4488bb,1.5);d1.position.set(5,10,8);scene.add(d1)
+  const d2=new T.DirectionalLight(0x224466,1);d2.position.set(-3,3,-5);scene.add(d2)
   ALL_NODES.forEach(def=>{
-    const pl=new T.PointLight(def.color,1.2,6);pl.position.set(def.x,1.5,def.z);scene.add(pl)
+    const pl=new T.PointLight(def.color,2.5,8);pl.position.set(def.x,2,def.z);scene.add(pl)
   })
 
   // 地面（大面积覆盖）
   const ground=new T.Mesh(
     new T.PlaneGeometry(40,30),
-    new T.MeshStandardMaterial({color:0x384438,roughness:0.9,metalness:0.05})
+    new T.MeshStandardMaterial({color:0x0a0e1a,roughness:0.8,metalness:0.2})
   )
   ground.rotation.x=-Math.PI/2;ground.position.y=-0.06;scene.add(ground)
+  // 科技网格
+  const gridHelper=new T.GridHelper(40,40,0x00ccff,0x004488)
+  gridHelper.position.y=-0.04;gridHelper.material.transparent=true;gridHelper.material.opacity=0.6
+  scene.add(gridHelper)
 
-  // 节点发光底板
+  // 节点发光底板 - 科技风多层光环
   ALL_NODES.forEach(def=>{
-    for(const[r,op]of[[0.7,0.6],[0.5,0.4],[0.32,0.25]]){
-      const ring=new T.Mesh(new T.TorusGeometry(r,0.015,8,48),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:op,depthWrite:false}))
+    for(const[r,op,em]of[[0.7,0.7,true],[0.5,0.5,false],[0.32,0.35,false]]){
+      const mat=new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:op,depthWrite:false})
+      const ring=new T.Mesh(new T.TorusGeometry(r,0.02,12,48),mat)
       ring.rotation.x=-Math.PI/2;ring.position.set(def.x,0.01,def.z);scene.add(ring)
     }
+    // 发光底座平面
+    const glowDisc=new T.Mesh(
+      new T.CircleGeometry(0.32,24),
+      new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.15,depthWrite:false})
+    )
+    glowDisc.rotation.x=-Math.PI/2;glowDisc.position.set(def.x,0.008,def.z);scene.add(glowDisc)
   })
 
   // ===== 道路系统 =====
@@ -153,11 +163,13 @@ async function initThree(){
   }
 
   function createRoad(curve,rw,isMain,T){
-    // 路肩 + 路面
-    scene.add(buildRoadRibbon(curve,rw+0.18,0.01,0x909898,0.85))
-    scene.add(buildRoadRibbon(curve,rw,0.018,0x586068,0.5))
+    // 路肩 + 路面（科技风）
+    scene.add(buildRoadRibbon(curve,rw+0.18,0.01,0x0a1520,0.9))
+    const roadMat=new T.MeshStandardMaterial({color:0x0d1e30,roughness:0.3,metalness:0.6,emissive:0x003355,emissiveIntensity:0.4})
+    const roadMesh=buildRoadRibbon(curve,rw,0.018,0x0d1e30,0.5)
+    roadMesh.material=roadMat;scene.add(roadMesh)
     const pts=curve.getPoints(isMain?300:150)
-    // 白色边线
+    // 霓虹边线
     for(const side of[1,-1]){
       const eg=new T.BufferGeometry();const ev=[]
       for(let i=0;i<pts.length;i++){
@@ -166,22 +178,25 @@ async function initThree(){
         ev.push(pt.x+n.x*rw*side,0.022,pt.z+n.z*rw*side)
       }
       eg.setAttribute('position',new T.Float32BufferAttribute(ev,3))
-      scene.add(new T.Line(eg,new T.LineBasicMaterial({color:0xffffff,depthWrite:false})))
+      scene.add(new T.Line(eg,new T.LineBasicMaterial({color:0x00ddff,depthWrite:false})))
     }
-    // 黄色虚线
+    // 发光虚线
     const dg=new T.BufferGeometry();const dv=[]
     for(let i=0;i<pts.length-1;i+=(isMain?8:12)){
       dv.push(pts[i].x,0.022,pts[i].z,pts[Math.min(i+(isMain?4:6),pts.length-1)].x,0.022,pts[Math.min(i+(isMain?4:6),pts.length-1)].z)
     }
     dg.setAttribute('position',new T.Float32BufferAttribute(dv,3))
-    scene.add(new T.LineSegments(dg,new T.LineBasicMaterial({color:0xffc800,transparent:true,opacity:0.65,depthWrite:false})))
+    const dashMat=new T.LineBasicMaterial({color:0x00ffaa,transparent:true,opacity:0.8,depthWrite:false})
+    scene.add(new T.LineSegments(dg,dashMat))
   }
 
   function createNodePad(x,z,color,T){
-    const pad=new T.Mesh(new T.CylinderGeometry(0.5,0.52,0.03,24),new T.MeshStandardMaterial({color:0x586068,roughness:0.5,metalness:0.1}))
+    const pad=new T.Mesh(new T.CylinderGeometry(0.5,0.52,0.03,32),new T.MeshStandardMaterial({color:0x0d1e30,roughness:0.2,metalness:0.8,emissive:color,emissiveIntensity:0.15}))
     pad.position.set(x,0.015,z);scene.add(pad)
-    const ring=new T.Mesh(new T.TorusGeometry(0.5,0.025,8,24),new T.MeshBasicMaterial({color,transparent:true,opacity:0.5,depthWrite:false}))
-    ring.rotation.x=-Math.PI/2;ring.position.set(x,0.032,z);scene.add(ring)
+    for(const[r,op]of[[0.52,0.6],[0.48,0.4]]){
+      const ring=new T.Mesh(new T.TorusGeometry(r,0.015,12,48),new T.MeshBasicMaterial({color,transparent:true,opacity:op,depthWrite:false}))
+      ring.rotation.x=-Math.PI/2;ring.position.set(x,0.032,z);scene.add(ring)
+    }
   }
 
   // 主路线
@@ -201,41 +216,43 @@ async function initThree(){
     createNodePad(sn.x,sn.z,sn.color,T)
   })
 
-  // ===== 景观：小树 =====
-  function createTree(x,z,s,T){
-    const tree=new T.Group()
-    const trunk=new T.Mesh(new T.CylinderGeometry(0.04*s,0.06*s,0.25*s,6),new T.MeshStandardMaterial({color:0x8B6914,roughness:0.9}))
-    trunk.position.y=0.12*s;tree.add(trunk)
-    const l1=new T.Mesh(new T.ConeGeometry(0.15*s,0.3*s,8),new T.MeshStandardMaterial({color:0x4a8c3f,roughness:0.8}))
-    l1.position.y=0.28*s;tree.add(l1)
-    const l2=new T.Mesh(new T.ConeGeometry(0.11*s,0.22*s,8),new T.MeshStandardMaterial({color:0x5da04e,roughness:0.8}))
-    l2.position.y=0.42*s;tree.add(l2)
-    tree.position.set(x,0,z);scene.add(tree)
+  // ===== 景观：数据晶体 =====
+  function createCrystal(x,z,s,T){
+    const g=new T.Group()
+    const col=0x00ccff
+    const base=new T.Mesh(new T.BoxGeometry(0.04*s,0.06*s,0.04*s),new T.MeshStandardMaterial({color:0x1a2a3a,roughness:0.3,metalness:0.8}))
+    base.position.y=0.03*s;g.add(base)
+    const c1=new T.Mesh(new T.ConeGeometry(0.06*s,0.25*s,6),new T.MeshStandardMaterial({color:col,roughness:0.1,metalness:0.3,emissive:col,emissiveIntensity:0.6,transparent:true,opacity:0.85}))
+    c1.position.y=0.15*s;g.add(c1)
+    const c2=new T.Mesh(new T.ConeGeometry(0.04*s,0.15*s,6),new T.MeshStandardMaterial({color:0x00ddff,roughness:0.1,metalness:0.3,emissive:0x00ddff,emissiveIntensity:0.8,transparent:true,opacity:0.7}))
+    c2.position.y=0.3*s;g.add(c2)
+    g.position.set(x,0,z);scene.add(g)
   }
   [[-5.8,0.9],[-3.2,-0.8],[-1.5,0.9],[1.4,0.9],[3.2,-0.8],[5.8,-0.7],
    [-5.5,-0.8],[-3.8,0],[1.0,-1.1],[5.5,0.8],
    [-0.5,-1.8],[1.5,-3.0],[3.0,-1.8],[4.8,-1.5],[0.8,-3.3]]
-  .forEach(([tx,tz])=>createTree(tx,tz,0.5+Math.random()*0.4,T))
+  .forEach(([tx,tz])=>createCrystal(tx,tz,0.5+Math.random()*0.4,T))
 
-  // ===== 景观：小房子 =====
-  function createHouse(x,z,bc,rc,s,T){
-    const h=new T.Group();const ss=s||1
-    h.add(new T.Mesh(new T.BoxGeometry(0.35*ss,0.22*ss,0.3*ss),new T.MeshStandardMaterial({color:bc,roughness:0.6}))).position.y=0.11*ss
-    const roof=new T.Mesh(new T.ConeGeometry(0.28*ss,0.18*ss,4),new T.MeshStandardMaterial({color:rc,roughness:0.5}))
-    roof.position.y=0.31*ss;roof.rotation.y=Math.PI/4;h.add(roof)
-    const door=new T.Mesh(new T.BoxGeometry(0.08*ss,0.1*ss,0.02*ss),new T.MeshStandardMaterial({color:0x8B6914,roughness:0.7}))
-    door.position.set(0,0.07*ss,0.15*ss);h.add(door)
-    for(const wx of[-0.09,0.09]){
-      const win=new T.Mesh(new T.BoxGeometry(0.06*ss,0.06*ss,0.01*ss),new T.MeshBasicMaterial({color:0xaaddff}))
-      win.position.set(wx*ss,0.15*ss,0.15*ss);h.add(win)
+  // ===== 景观：数据塔 =====
+  function createDataTower(x,z,bc,lc,s,T){
+    const g=new T.Group();const ss=s||1
+    const rack=new T.Mesh(new T.BoxGeometry(0.25*ss,0.18*ss,0.22*ss),new T.MeshStandardMaterial({color:0x0d1e30,roughness:0.2,metalness:0.9,emissive:0x001122,emissiveIntensity:0.2}))
+    rack.position.y=0.09*ss;g.add(rack)
+    // LED 灯行
+    for(let i=0;i<4;i++)for(let j=0;j<3;j++){
+      const led=new T.Mesh(new T.BoxGeometry(0.02*ss,0.01*ss,0.01*ss),new T.MeshBasicMaterial({color:lc||0x00ff88,transparent:true,opacity:0.4+Math.random()*0.6}))
+      led.position.set((-0.06+j*0.06)*ss,(0.04+i*0.035)*ss,0.11*ss);rack.add(led)
     }
-    h.position.set(x,0,z);scene.add(h)
+    // 顶部天线
+    const ant=new T.Mesh(new T.CylinderGeometry(0.005*ss,0.008*ss,0.1*ss,4),new T.MeshStandardMaterial({color:0x4488aa,emissive:0x00ccff,emissiveIntensity:1,roughness:0.1,metalness:0.5}))
+    ant.position.y=0.22*ss;g.add(ant)
+    g.position.set(x,0,z);scene.add(g)
   }
-  [{x:-4.2,z:1.05,bc:0xf5e6d3,rc:0xc0392b},{x:-2.5,z:-0.9,bc:0xe8dcc8,rc:0x8e44ad},
-   {x:-1.0,z:0.95,bc:0xfdebd0,rc:0x2980b9},{x:0.6,z:-0.85,bc:0xf5e6d3,rc:0xd35400},
-   {x:2.0,z:0.95,bc:0xe8dcc8,rc:0x27ae60},{x:4.2,z:1.0,bc:0xfdebd0,rc:0xc0392b},
-   {x:5.5,z:-0.85,bc:0xf5e6d3,rc:0x8e44ad},{x:-6.0,z:-0.7,bc:0xe8dcc8,rc:0x2980b9}]
-  .forEach(h=>createHouse(h.x,h.z,h.bc,h.rc,0.8+Math.random()*0.3,T))
+  [{x:-4.2,z:1.05,bc:0x0d1e30,lc:0x00ddff},{x:-2.5,z:-0.9,bc:0x0d1e30,lc:0xaa44ff},
+   {x:-1.0,z:0.95,bc:0x0d1e30,lc:0x00ff88},{x:0.6,z:-0.85,bc:0x0d1e30,lc:0xff6600},
+   {x:2.0,z:0.95,bc:0x0d1e30,lc:0x00ffee},{x:4.2,z:1.0,bc:0x0d1e30,lc:0xff44aa},
+   {x:5.5,z:-0.85,bc:0x0d1e30,lc:0x4488ff},{x:-6.0,z:-0.7,bc:0x0d1e30,lc:0x00ffaa}]
+  .forEach(h=>createDataTower(h.x,h.z,h.bc,h.lc,0.8+Math.random()*0.3,T))
 
   // ===== 节点模型 =====
   function buildNode(def,isSupplier){
@@ -269,10 +286,16 @@ async function initThree(){
       beaconGlow=new T.Mesh(new T.SphereGeometry(0.12,8,8),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.25,depthWrite:false}))
       beaconGlow.position.copy(beacon.position);grp.add(beaconGlow)
     }else{
-      // 根据类型构建不同形状
+      // 根据类型构建不同形状（科技全息风格）
       const k=def.key
-      const mat=(c)=>new T.MeshStandardMaterial({color:c,roughness:0.25,metalness:0.5,emissive:c,emissiveIntensity:0.3,transparent:true,opacity:0.85})
-      const elm=(c)=>new T.LineBasicMaterial({color:c,transparent:true,opacity:0.4,depthWrite:false})
+      const mat=(c)=>new T.MeshStandardMaterial({color:c,roughness:0.15,metalness:0.7,emissive:c,emissiveIntensity:0.5,transparent:true,opacity:0.8})
+      const elm=(c)=>new T.LineBasicMaterial({color:c,transparent:true,opacity:0.7,depthWrite:false})
+      // 垂直光柱
+      const beam=new T.Mesh(
+        new T.CylinderGeometry(0.015,0.025,pH*0.7,8),
+        new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.12,depthWrite:false,blending:T.AdditiveBlending})
+      )
+      beam.position.y=0.06*s+pH*0.35;grp.add(beam)
       try{
       if(k==='totalOrders'){
         const w=0.35*s,d=0.3*s,h1=pH*0.4,h2=pH*0.35
@@ -283,7 +306,7 @@ async function initThree(){
         edges=new T.LineSegments(new T.EdgesGeometry(pillar.geometry),elm(def.color));edges.position.copy(pillar.position);grp.add(edges)
         beacon=new T.Mesh(new T.SphereGeometry(0.05*s,8,8),new T.MeshBasicMaterial({color:0xffffff}));beacon.position.y=0.06*s+h1+h2+0.22*s;beacon.userData={baseScale:1};grp.add(beacon)
         beaconGlow=new T.Mesh(new T.SphereGeometry(0.12*s,8,8),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.25,depthWrite:false}));beaconGlow.position.copy(beacon.position);grp.add(beaconGlow)
-        for(const r of[0.33,0.66]){const rg=new T.Mesh(new T.TorusGeometry(w*0.55,0.012,8,32),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.55,depthWrite:false}));rg.position.y=0.06*s+(h1+h2)*r;rg.userData={rotSpeed:r===0.33?0.8:-0.5};grp.add(rg);rings.push(rg)}
+        for(const r of[0.33,0.66]){const rg=new T.Mesh(new T.TorusGeometry(w*0.55,0.012,8,32),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.8,depthWrite:false}));rg.position.y=0.06*s+(h1+h2)*r;rg.userData={rotSpeed:r===0.33?0.8:-0.5};grp.add(rg);rings.push(rg)}
       }else if(k==='pendingOrders'){
         const cr=0.25*s,ch=pH*0.35
         pillar=new T.Mesh(new T.ConeGeometry(cr,ch,8),mat(def.color));pillar.position.y=0.06*s+ch/2;pillar.rotation.z=Math.PI;grp.add(pillar)
@@ -291,14 +314,14 @@ async function initThree(){
         edges=new T.LineSegments(new T.EdgesGeometry(pillar.geometry),elm(def.color));edges.position.copy(pillar.position);grp.add(edges)
         beacon=new T.Mesh(new T.SphereGeometry(0.05*s,8,8),new T.MeshBasicMaterial({color:0xffffff}));beacon.position.y=0.06*s+ch*2+0.08*s;beacon.userData={baseScale:1};grp.add(beacon)
         beaconGlow=new T.Mesh(new T.SphereGeometry(0.12*s,8,8),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.25,depthWrite:false}));beaconGlow.position.copy(beacon.position);grp.add(beaconGlow)
-        for(const r of[0.33,0.66]){const rg=new T.Mesh(new T.TorusGeometry(cr*0.8,0.012,8,32),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.55,depthWrite:false}));rg.position.y=0.06*s+ch*2*r;rg.userData={rotSpeed:r===0.33?0.8:-0.5};grp.add(rg);rings.push(rg)}
+        for(const r of[0.33,0.66]){const rg=new T.Mesh(new T.TorusGeometry(cr*0.8,0.012,8,32),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.8,depthWrite:false}));rg.position.y=0.06*s+ch*2*r;rg.userData={rotSpeed:r===0.33?0.8:-0.5};grp.add(rg);rings.push(rg)}
       }else if(k==='pendingDelivery'){
         const w=0.3*s,h=pH*0.7,d=0.35*s
         pillar=new T.Mesh(new T.BoxGeometry(w,h,d),mat(def.color));pillar.position.y=0.06*s+h/2;grp.add(pillar)
         edges=new T.LineSegments(new T.EdgesGeometry(pillar.geometry),elm(def.color));edges.position.copy(pillar.position);grp.add(edges)
         beacon=new T.Mesh(new T.SphereGeometry(0.05*s,8,8),new T.MeshBasicMaterial({color:0xffffff}));beacon.position.y=0.06*s+h+0.06*s;beacon.userData={baseScale:1};grp.add(beacon)
         beaconGlow=new T.Mesh(new T.SphereGeometry(0.12*s,8,8),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.25,depthWrite:false}));beaconGlow.position.copy(beacon.position);grp.add(beaconGlow)
-        for(const r of[0.33,0.66]){const rg=new T.Mesh(new T.TorusGeometry(w*0.8,0.012,8,32),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.55,depthWrite:false}));rg.position.y=0.06*s+h*r;rg.userData={rotSpeed:r===0.33?0.8:-0.5};grp.add(rg);rings.push(rg)}
+        for(const r of[0.33,0.66]){const rg=new T.Mesh(new T.TorusGeometry(w*0.8,0.012,8,32),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.8,depthWrite:false}));rg.position.y=0.06*s+h*r;rg.userData={rotSpeed:r===0.33?0.8:-0.5};grp.add(rg);rings.push(rg)}
       }else if(k==='totalReceives'){
         const w=0.4*s,h=pH*0.5,d=0.35*s
         pillar=new T.Mesh(new T.BoxGeometry(w,h,d),mat(def.color));pillar.position.y=0.06*s+h/2;grp.add(pillar)
@@ -307,7 +330,7 @@ async function initThree(){
         edges=new T.LineSegments(new T.EdgesGeometry(pillar.geometry),elm(def.color));edges.position.copy(pillar.position);grp.add(edges)
         beacon=new T.Mesh(new T.SphereGeometry(0.05*s,8,8),new T.MeshBasicMaterial({color:0xffffff}));beacon.position.y=0.06*s+h+rh+0.04*s;beacon.userData={baseScale:1};grp.add(beacon)
         beaconGlow=new T.Mesh(new T.SphereGeometry(0.12*s,8,8),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.25,depthWrite:false}));beaconGlow.position.copy(beacon.position);grp.add(beaconGlow)
-        for(const r of[0.33,0.66]){const rg=new T.Mesh(new T.TorusGeometry(w*0.6,0.012,8,32),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.55,depthWrite:false}));rg.position.y=0.06*s+h*r;rg.userData={rotSpeed:r===0.33?0.8:-0.5};grp.add(rg);rings.push(rg)}
+        for(const r of[0.33,0.66]){const rg=new T.Mesh(new T.TorusGeometry(w*0.6,0.012,8,32),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.8,depthWrite:false}));rg.position.y=0.06*s+h*r;rg.userData={rotSpeed:r===0.33?0.8:-0.5};grp.add(rg);rings.push(rg)}
       }else{
         const w=0.22*s,h=pH*0.8,d=0.22*s
         pillar=new T.Mesh(new T.BoxGeometry(w,h,d),mat(def.color));pillar.position.y=0.06*s+h/2;grp.add(pillar)
@@ -317,9 +340,9 @@ async function initThree(){
         an.position.y=0.06*s+h+ah/2;grp.add(an)
         beacon=new T.Mesh(new T.SphereGeometry(0.05*s,8,8),new T.MeshBasicMaterial({color:0xffffff}));beacon.position.y=0.06*s+h+ah+0.04*s;beacon.userData={baseScale:1};grp.add(beacon)
         beaconGlow=new T.Mesh(new T.SphereGeometry(0.12*s,8,8),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.25,depthWrite:false}));beaconGlow.position.copy(beacon.position);grp.add(beaconGlow)
-        for(const r of[0.33,0.66]){const rg=new T.Mesh(new T.TorusGeometry(w*0.9,0.012,8,32),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.55,depthWrite:false}));rg.position.y=0.06*s+h*r;rg.userData={rotSpeed:r===0.33?0.8:-0.5};grp.add(rg);rings.push(rg)}
+        for(const r of[0.33,0.66]){const rg=new T.Mesh(new T.TorusGeometry(w*0.9,0.012,8,32),new T.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.8,depthWrite:false}));rg.position.y=0.06*s+h*r;rg.userData={rotSpeed:r===0.33?0.8:-0.5};grp.add(rg);rings.push(rg)}
       }
-      }catch(e){console.error('buildNode error:',def.key,e);pillar=new T.Mesh(new T.CylinderGeometry(pR*0.7,pR,pH,8),new T.MeshStandardMaterial({color:def.color,roughness:0.25,metalness:0.5,emissive:def.color,emissiveIntensity:0.3,transparent:true,opacity:0.85}));pillar.position.y=0.06*s+pH/2;grp.add(pillar)}
+      }catch(e){console.error('buildNode error:',def.key,e);pillar=new T.Mesh(new T.CylinderGeometry(pR*0.7,pR,pH,8),new T.MeshStandardMaterial({color:def.color,roughness:0.15,metalness:0.7,emissive:def.color,emissiveIntensity:0.5,transparent:true,opacity:0.8}));pillar.position.y=0.06*s+pH/2;grp.add(pillar)}
     }
 
     grp.position.set(def.x,0,def.z);scene.add(grp)
@@ -340,15 +363,18 @@ async function initThree(){
     const pts=new T.Points(geo,new T.PointsMaterial({color,size,blending:T.AdditiveBlending,depthWrite:false,transparent:true,opacity:0.9}))
     scene.add(pts);flowSystems.push({curve,points:pts,data})
   }
-  addFlowParticles(mainCurve,0x44ccff,50,0.07,T)
-  branchCurves.forEach((c,i)=>addFlowParticles(c,SUPPLIER_NODES[i].color,15,0.06,T))
+  addFlowParticles(mainCurve,0x00ddff,80,0.10,T)
+  branchCurves.forEach((c,i)=>addFlowParticles(c,SUPPLIER_NODES[i].color,20,0.08,T))
 
   // ===== 行驶小车 =====
-  const carColors=[0xff6644,0x44cc88,0xffaa00,0xcc44ff,0x44aaff]
+  const carColors=[0xff3366,0x00ffcc,0xffaa00,0xcc44ff,0x00ddff]
   const roadCars=[], laneOff=0.13
   for(let i=0;i<5;i++){
     const co=createCarModel(carColors[i],T)
     const mc=co.group;mc.scale.set(0.55,0.55,0.55)
+    // 车身材质增强发光
+    co.body.material.emissiveIntensity=0.8
+    co.body.material.emissive=new THREE.Color(carColors[i])
     const dir=i<3?1:-1, lane=dir>0?1:-1
     const td={t:Math.random(),speed:0.025+Math.random()*0.04,dir,lane}
     const pt=mainCurve.getPoint(td.t)
@@ -361,14 +387,16 @@ async function initThree(){
   }
   flowSystems.push({curve:mainCurve,roadCars,laneOff})
 
-  // ===== 环境粒子 =====
-  const pc=250;const pg=new T.BufferGeometry();const pp=new Float32Array(pc*3)
+  // ===== 环境粒子（星云效果） =====
+  const pc=400;const pg=new T.BufferGeometry();const pp=new Float32Array(pc*3);const pc2=new Float32Array(pc)
   for(let i=0;i<pc;i++){
-    const rad=2+Math.random()*8,th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1)
-    pp[i*3]=Math.cos(th)*Math.sin(ph)*rad;pp[i*3+1]=Math.sin(th)*Math.sin(ph)*rad*0.3+3;pp[i*3+2]=Math.cos(ph)*rad
+    const rad=3+Math.random()*12,th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1)
+    pp[i*3]=Math.cos(th)*Math.sin(ph)*rad;pp[i*3+1]=Math.sin(th)*Math.sin(ph)*rad*0.4+4;pp[i*3+2]=Math.cos(ph)*rad
+    pc2[i]=0.3+Math.random()*0.7
   }
   pg.setAttribute('position',new T.BufferAttribute(pp,3))
-  particles=new T.Points(pg,new T.PointsMaterial({color:0x4488cc,size:0.04,blending:T.AdditiveBlending,depthWrite:false,transparent:true,opacity:0.4}))
+  pg.setAttribute('size',new T.Float32BufferAttribute(pc2,1))
+  particles=new T.Points(pg,new T.PointsMaterial({color:0x88ccff,size:0.06,blending:T.AdditiveBlending,depthWrite:false,transparent:true,opacity:0.6}))
   scene.add(particles)
 
   animate()
@@ -424,38 +452,28 @@ function animate(){
 }
 
 function onMouseDown(e){
-  isDragging=true;dragMoved=false;dragPrevX=e.clientX;dragPrevY=e.clientY
-  const el=document.getElementById('three-panel');if(el)el.style.cursor='grabbing'
+  dragStartX=e.clientX
 }
 function onMouseUp(){
-  isDragging=false
-  const el=document.getElementById('three-panel');if(el)el.style.cursor='grab'
+  // 不做任何事，仅用于结束拖拽
 }
 function onWheel(e){
   e.preventDefault()
-  const oldDist=camDist
-  camDist+=e.deltaY*0.015;camDist=Math.max(2.5,Math.min(10,camDist))
-  // 根据鼠标位置定向缩放
-  if(camera&&scene){
-    const rc=new THREE.Raycaster();rc.setFromCamera(new THREE.Vector2(mouseNDC.x,mouseNDC.y),camera)
-    const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0.06)
-    const target=new THREE.Vector3()
-    if(rc.ray.intersectPlane(groundPlane,target)){
-      const zoomF=(oldDist-camDist)/oldDist
-      pivotX+=(target.x-pivotX)*zoomF
-      pivotZ+=(target.z-pivotZ)*zoomF
-    }
-  }
+  camDist+=e.deltaY*0.015;camDist=Math.max(2.0,Math.min(DEF_CAMDIST,camDist))
 }
 function onMouseMove(e){
   if(!camera)return;const el=document.getElementById('three-panel');if(!el)return
-  if(isDragging&&(e.buttons&1)){
-    const dx=e.clientX-dragPrevX,dy=e.clientY-dragPrevY
-    if(Math.abs(dx)>2||Math.abs(dy)>2)dragMoved=true
-    camTheta+=dx*0.005;camPhi+=dy*0.005
-    camPhi=Math.max(0.25,Math.min(1.45,camPhi))
-    dragPrevX=e.clientX;dragPrevY=e.clientY
-    el.style.cursor='grabbing';return
+  // 水平拖拽旋转
+  if(e.buttons&1){
+    const dx=e.clientX-dragStartX
+    if(Math.abs(dx)>2){
+      camTheta+=dx*0.006
+      // 限制水平旋转角度，确保节点始终在视野内
+      camTheta=Math.max(DEF_THETA-1.0,Math.min(DEF_THETA+1.0,camTheta))
+      dragStartX=e.clientX
+      el.style.cursor='ew-resize'
+    }
+    return  // 拖拽时忽略悬停提示
   }
   const rect=el.getBoundingClientRect()
   const mx=((e.clientX-rect.left)/rect.width)*2-1, my=-((e.clientY-rect.top)/rect.height)*2+1
@@ -472,11 +490,11 @@ function onMouseMove(e){
       cd.pillar.material.emissiveIntensity=0.5;return
     }
   }
-  el.style.cursor=isDragging?'grabbing':'grab';tooltip3D.value.show=false
+  el.style.cursor='default';tooltip3D.value.show=false
   containerData.forEach(cd=>{cd.pillar.material.emissiveIntensity=0.3})
 }
 function onClick(e){
-  if(dragMoved)return;if(!camera)return
+  if(!camera)return
   const el=document.getElementById('three-panel');if(!el)return
   const rect=el.getBoundingClientRect()
   const mx=((e.clientX-rect.left)/rect.width)*2-1, my=-((e.clientY-rect.top)/rect.height)*2+1
@@ -557,7 +575,7 @@ onBeforeUnmount(()=>{clearInterval(clockTimer);removeEventListener('resize',onRe
           <div class="panel-3d-head">
             <span class="panel-3d-title">供应链数字孪生</span>
             <div style="display:flex;align-items:center;gap:8px;">
-              <span class="panel-3d-hint">拖拽旋转 · 滚轮缩放 · 点击跳转</span>
+              <span class="panel-3d-hint">水平拖拽旋转 · 滚轮缩放 · 点击跳转</span>
               <button class="reset-btn" @click="resetView" title="重置视角">↺</button>
             </div>
           </div>
@@ -571,10 +589,10 @@ onBeforeUnmount(()=>{clearInterval(clockTimer);removeEventListener('resize',onRe
 </template>
 
 <style>
-.three-tip{position:fixed;z-index:9999;pointer-events:none;background:rgba(26,36,48,.95);color:#c8d6e5;padding:8px 14px;border-radius:8px;border:1px solid rgba(100,160,220,.3);font-size:12px;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4);}
-.three-tip .tt-label{color:#7a8a9a;font-size:10px;letter-spacing:1px;}
-.three-tip .tt-val{font-size:20px;font-weight:700;color:#5aacff;}
-.three-tip .tt-click{color:#6a7a90;font-size:10px;margin-top:2px;}
+.three-tip{position:fixed;z-index:9999;pointer-events:none;background:rgba(5,10,21,.96);color:#88ccff;padding:10px 16px;border-radius:6px;border:1px solid rgba(0,200,255,.4);font-size:12px;white-space:nowrap;box-shadow:0 0 20px rgba(0,200,255,.15),0 4px 20px rgba(0,0,0,.5);}
+.three-tip .tt-label{color:#4488bb;font-size:10px;letter-spacing:2px;text-transform:uppercase;}
+.three-tip .tt-val{font-size:22px;font-weight:700;color:#00ddff;text-shadow:0 0 10px rgba(0,220,255,.5);}
+.three-tip .tt-click{color:#336688;font-size:10px;margin-top:2px;}
 </style>
 
 <style scoped>
@@ -605,13 +623,13 @@ onBeforeUnmount(()=>{clearInterval(clockTimer);removeEventListener('resize',onRe
 .card-bar-fill.success{background:#67c23a}
 .card-rate{font-size:11px;font-weight:600;color:#606266;min-width:32px;text-align:right}
 
-.panel-3d{background:#1a2430;border-radius:10px;overflow:hidden;border:1px solid #2a3a4a;margin-bottom:20px;box-shadow:0 2px 16px rgba(0,0,0,.2);user-select:none;-webkit-user-select:none}
-.panel-3d-head{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;border-bottom:1px solid #2a3a4a;background:#1e2835;user-select:none;-webkit-user-select:none}
-.panel-3d-title{font-size:15px;font-weight:600;color:#c8d6e5;letter-spacing:1px}
-.panel-3d-hint{font-size:11px;color:#6a7a90}
-#three-panel{width:100%;height:420px;user-select:none;-webkit-user-select:none}
-.reset-btn{width:26px;height:26px;border-radius:50%;border:1px solid #556070;background:#2a3a4a;color:#aabbcc;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0;transition:all .2s;line-height:1}
-.reset-btn:hover{background:#3a4a5a;color:#fff;border-color:#778899}
+.panel-3d{background:#050a15;border-radius:8px;overflow:hidden;border:1px solid #0d2a4a;margin-bottom:20px;box-shadow:0 0 30px rgba(0,100,200,.1),0 2px 16px rgba(0,0,0,.5);user-select:none;-webkit-user-select:none}
+.panel-3d-head{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid #0d2a4a;background:#080e1a;user-select:none;-webkit-user-select:none}
+.panel-3d-title{font-size:16px;font-weight:600;color:#00ddff;letter-spacing:2px;text-shadow:0 0 10px rgba(0,220,255,.3)}
+.panel-3d-hint{font-size:11px;color:#4488bb;letter-spacing:1px}
+#three-panel{width:100%;height:460px;user-select:none;-webkit-user-select:none}
+.reset-btn{width:28px;height:28px;border-radius:50%;border:1px solid #0d3a5a;background:#081420;color:#4488bb;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0;transition:all .2s;line-height:1}
+.reset-btn:hover{background:#0d2a4a;color:#00ddff;border-color:#00aaff;box-shadow:0 0 10px rgba(0,170,255,.3)}
 
 .rate-cards{grid-template-columns:repeat(3,1fr)!important;margin-bottom:20px}
 .rate-card .card-val{font-size:32px}
