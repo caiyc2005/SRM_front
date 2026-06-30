@@ -122,7 +122,15 @@ const checkedRoles = ref([])
 async function loadRoles() {
   try {
     const res = await apiGet('GetRoles')
-    if (res.success && res.data?.length) { roles.value = res.data; return }
+    if (res.success && res.data?.length) {
+      const order = ['admin','管理员','超级管理员','purchase','采购员','supplier','供应商','whclerk','仓管员','仓库管理员']
+      roles.value = res.data.sort((a, b) => {
+        const ia = order.indexOf(a.roleName)
+        const ib = order.indexOf(b.roleName)
+        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
+      })
+      return
+    }
   } catch { /* 降级 */ }
 }
 
