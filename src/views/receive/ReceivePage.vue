@@ -6,7 +6,7 @@
  *       Tab2：收料记录查询
  *       Tab3：待收料列表
  */
-import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ExcelJS from 'exceljs'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -23,6 +23,7 @@ const useApi = ref(false)
 
 // ==================== Tab 控制 ====================
 const activeTab = ref('receive')
+const loadedTabs = { receive: false, history: false, pending: false }
 
 // ==================== 数据 ====================
 const allDeliveries = ref([])
@@ -537,8 +538,10 @@ async function loadPendingOrders() {
         createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
         deliveryNo: item.noteCode || '',
         noteCode: item.noteCode || '',
+        orderCode: '',
         materials: (item.details || []).map((dd, i) => ({
           index: i + 1,
+          orderCode: dd.orderCode || '',
           materialCode: dd.materialCode || '',
           materialName: dd.materialName || '',
           spec: dd.spec || '',
@@ -878,9 +881,20 @@ async function handlePendingExport() {
 // ==================== 生命周期 ====================
 onMounted(() => {
   loadSuppliers()
-  loadReceiveRecords()
-  loadPendingOrders()
   loadWarehouses()
+  loadedTabs.receive = true
+})
+
+// 按需加载：点击 Tab 时才请求对应数据
+watch(activeTab, (tab) => {
+  if (tab === 'history' && !loadedTabs.history) {
+    loadedTabs.history = true
+    loadReceiveRecords()
+  }
+  if (tab === 'pending' && !loadedTabs.pending) {
+    loadedTabs.pending = true
+    loadPendingOrders()
+  }
 })
 </script>
 
@@ -1196,7 +1210,6 @@ onMounted(() => {
                   <template #default="{ row }">
                     <div class="detail-content">
                       <div class="detail-info">
-                        <div><span>订单编号：</span><b>{{ row.orderCode }}</b></div>
                         <div><span>供应商：</span><b>{{ row.supplierName }}</b></div>
                         <div><span>订单状态：</span><b>{{ getDeliveryStatusText(row.status) }}</b></div>
                         <div><span>总金额：</span><b class="red-price">¥{{ row.totalAmount }}</b></div>
@@ -1204,6 +1217,7 @@ onMounted(() => {
                         <div><span>创建时间：</span><b>{{ row.createTime }}</b></div>
                       </div>
                       <el-table :data="row.materials" size="small" border style="width: 100%">
+                        <el-table-column prop="orderCode" label="订单编号" min-width="150" align="center" />
                         <el-table-column prop="index" label="序号" width="60" align="center" />
                         <el-table-column prop="materialCode" label="物料编码" width="120" align="center" />
                         <el-table-column prop="materialName" label="物料名称" width="180" align="center" />
@@ -1224,7 +1238,6 @@ onMounted(() => {
                     <span v-else style="color: #999;">—</span>
                   </template>
                 </el-table-column>
-                <el-table-column prop="orderCode" label="订单编号" min-width="150" align="center" />
                 <el-table-column prop="supplierName" label="供应商" min-width="160" align="center" />
                 <el-table-column prop="materialCount" label="物料种数" align="center" />
                 <el-table-column label="订单状态" width="100" align="center">

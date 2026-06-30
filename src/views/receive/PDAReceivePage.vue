@@ -272,7 +272,8 @@ async function handleSearch() {
       }
       receiveFormItems.value = foundDelivery.value.materials.map(m => ({
         ...m,
-        receivedQty: m.remaining
+        receivedQty: m.remaining,
+        orderCode: foundDelivery.value.orderCode
       }))
       return
     }
@@ -811,6 +812,7 @@ onMounted(() => {
           >
             <div class="detail-card__head">
               <div class="detail-card__title-block">
+                <span class="detail-card__code" style="font-size:11px;color:#1890ff;">{{ item.orderCode }}</span>
                 <span class="detail-card__name">{{ item.materialName }}</span>
                 <span class="detail-card__code">{{ item.materialCode }}</span>
               </div>
