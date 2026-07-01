@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(python -c \"import re; f=open\\('d:/SRM/frontend/src/views/delivery/DeliveryPrintListPage.vue','r',encoding='utf-8'\\); c=f.read\\(\\); f.close\\(\\); c=re.sub\\(r'status: query.status.*?undefined,','status: query.status && query.status != '\"'\"'all'\"'\"' ? query.status : undefined,',c\\); f2=open\\('d:/SRM/frontend/src/views/delivery/DeliveryPrintListPage.vue','w',encoding='utf-8'\\); f2.write\\(c\\); f2.close\\(\\); print\\('ok'\\)\")",
-      "Bash(python -c ' *)"
-    ]
-  }
-}

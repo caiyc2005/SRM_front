@@ -99,26 +99,16 @@ onMounted(() => {
 
 const menuItems = [
   {
-    key: 'dashboard',
-    label: '📊 统计看板',
-    children: [
-      { key: 'dashboard-main', label: '主数据看板', path: '/dashboard/main' },
-      { key: 'dashboard-twin', label: '数字孪生', path: '/dashboard/twin' }
-    ]
-  },
-  {
     key: 'basic',
-    label: '📋 基础信息管理',
+    label: '📋 基础信息',
     children: [
       { key: 'basic-user', label: '用户管理', path: '/basic/user' },
       { key: 'basic-role', label: '角色管理', path: '/basic/role' },
       { key: 'supplier', label: '供应商管理', path: '/supplier' },
       { key: 'supplier-users', label: '供应商子账号', path: '/supplier/users' },
-      { key: 'warehouse', label: '仓库管理', path: '/basic/warehouse' },
       { key: 'material', label: '物料管理', path: '/basic/material' },
       { key: 'inventory', label: '库存查询', path: '/basic/inventory' },
-      
-      { key: 'login-logs', label: '登录日志', path: '/basic/login-logs' }
+      { key: 'warehouse', label: '仓库管理', path: '/basic/warehouse' }
     ]
   },
   {
@@ -135,24 +125,19 @@ const menuItems = [
     key: 'delivery',
     label: '🚚 送货单管理 ',
     children: [
-      { key: 'delivery', label: '送货单一览表', path: '/delivery' },
       { key: 'order-pending-delivery', label: '生成送货单', path: '/order/pending-delivery' },
-      
+      { key: 'delivery', label: '送货单查询', path: '/delivery' },
       { key: 'delivery-details', label: '送货明细查询', path: '/delivery/details' },
       { key: 'delivery-print', label: '打印送货单', path: '/delivery/printlist' },
     ]
   },
   {
     key: 'cargo',
-    label: '🏭 收料管理  ',
+    label: '🏭 货物管理  ',
     children: [
-      // { key: 'ship', label: '供应商发货', path: '/ship' },
-      { key: 'receive-pending', label: '待收料查询', path: '/receive/pending' },
+      { key: 'ship', label: '供应商发货', path: '/ship' },
       { key: 'receive', label: '收料入库', path: '/receive' },
-      { key: 'receive-pda', label: 'PDA收料', path: '/receive/pda' },
-      { key: 'receive-record', label: '收料记录', path: '/receive/history' },
-      
-      { key: 'receive-detail', label: '收料明细查询', path: '/receive/detail' }
+      { key: 'receive-pda', label: 'PDA收料', path: '/receive/pda' }
     ]
   },
 
@@ -187,7 +172,7 @@ function toggleExpand(key) {
 }
 
 function handleMenuClick(item) {
-  if (item.path) router.push(item.path).catch(() => {})
+  if (item.path) router.push(item.path)
 }
 
 // 自动展开当前路由对应的父菜单，收起其他所有菜单组
@@ -206,7 +191,7 @@ watch(() => route.path, () => {
 
 <template>
   <div class="sidebar">
-    <div class="logo" style="cursor:pointer;" @click="router.push('/welcome')">SRM管理系统</div>
+    <div class="logo">SRM管理系统</div>
     <template v-for="item in visibleMenuItems" :key="item.key">
       <!-- 有子菜单的父项 -->
       <template v-if="item.children">
@@ -223,7 +208,7 @@ watch(() => route.path, () => {
           :key="child.key"
           class="menu-item menu-child"
           :class="{ active: activeMenu === child.key }"
-          v-if="expandedKeys.includes(item.key)"
+          v-show="expandedKeys.includes(item.key)"
           @click="handleMenuClick(child)"
         >
           {{ child.label }}
@@ -246,13 +231,9 @@ watch(() => route.path, () => {
 <style scoped>
 .sidebar {
   width: 220px;
-  height: 100vh;
-  position: sticky;
-  top: 0;
-  flex-shrink: 0;
   background: #001529;
   color: #fff;
-  overflow-y: auto;
+  flex-shrink: 0;
 }
 .logo {
   height: 60px;

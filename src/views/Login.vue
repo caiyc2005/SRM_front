@@ -109,18 +109,9 @@ const handleLogin = async () => {
       localStorage.setItem('token', result.token)
       localStorage.setItem('userInfo', JSON.stringify(result.user))
       if (result.user?.roles) {
-        // 如果用户有 admin 角色，优先设为当前角色
-        const rawRoles = result.user.roles
-        const roles = rawRoles.map(r => (typeof r === 'object' ? (r.roleName || r.name || r) : r))
-        const hasAdmin = roles.some(r => r === 'admin' || r === '管理员')
-        const activeRoles = hasAdmin ? ['admin'] : roles
-        localStorage.setItem('userRoles', JSON.stringify(activeRoles))
-        // whclerk/仓管员 → 直接跳转到 PDA 收料页面
-        if (activeRoles.some(r => r === 'whclerk' || r === '仓管员')) {
-          return router.push('/receive/pda')
-        }
+        localStorage.setItem('userRoles', JSON.stringify(result.user.roles))
       }
-      router.push('/welcome')
+      router.push('/order')
     } else {
       alert(result.message || '账号或密码错误')
     }

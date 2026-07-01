@@ -104,7 +104,7 @@ const orderFilterFields = computed(() => {
   if (!isPendingMode() && !isPendingDeliveryMode()) {
     fields.push({ key: 'status', label: '订单状态', type: 'select', width: 180, options: orderStatusOptions })
   }
-  fields.push({ key: 'dateRange', label: '创建时间', type: 'daterange', width: 300 })
+  fields.push({ key: 'dateRange', label: isPendingMode() || isPendingDeliveryMode() ? '创建时间' : '发货时间', type: 'daterange', width: 300 })
   return fields
 })
 
@@ -283,7 +283,8 @@ async function loadOrders() {
       if (query.dateRange) {
         const [start, end] = query.dateRange
         list = list.filter(item => {
-          const d = (item.createTime || '').slice(0, 10)
+          if (!item.deliveryDate) return true
+          const d = item.deliveryDate.slice(0, 10)
           return d >= start && d <= end
         })
       }
@@ -579,7 +580,7 @@ async function handleConfirmDetail(row) {
     const res = await fetch(`${API_BASE}/ConfirmOrderDetail`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ orderDetailIDs: [row.orderDetailID] })
+      body: JSON.stringify({ orderDetailID: row.orderDetailID })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
@@ -593,42 +594,6 @@ async function handleConfirmDetail(row) {
   } catch {
     ElMessage.error('确认失败，后端不可用')
   }
-}
-
-/** 批量确认采购明细 */
-async function handleBatchConfirm(rows) {
-  if (!rows || rows.length === 0) return
-
-  try {
-    await ElMessageBox.confirm(
-      `确认要批量确认 ${rows.length} 条采购明细吗？确认后将不可撤回。`,
-      '批量确认操作',
-      { type: 'warning', confirmButtonText: '确认批量确认' }
-    )
-  } catch { return }
-
-  const token = localStorage.getItem('token')
-  const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {}
-
-  try {
-    const res = await fetch(`${API_BASE}/ConfirmOrderDetail`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders },
-      body: JSON.stringify({ orderDetailIDs: rows.map(r => r.orderDetailID) })
-    })
-    const text = await res.text()
-    const result = text ? JSON.parse(text) : {}
-
-    if (result.success || result.code === 200) {
-      ElMessage.success(`确认成功，共 ${rows.length} 条`)
-    } else {
-      ElMessage.warning(result.message || `确认完成，部分明细确认失败`)
-    }
-  } catch {
-    ElMessage.error('确认失败，后端不可用')
-  }
-  if (orderTableRef.value) orderTableRef.value.clearSelection()
-  await loadOrders()
 }
 
 async function handleBatchDelivery(rows) {
@@ -692,20 +657,14 @@ async function handleGenerateDelivery(row) {
 // ============ 送货数量弹窗 ============
 const deliveryQtyVisible = ref(false)
 const deliveryQtyItems = ref([])
-const expectedDate = ref('')
-
-function disabledDate(time) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return time.getTime() < today.getTime()
-}
+const deliveryExpectedDate = ref('')
 
 function openDeliveryQtyDialog(rows) {
   deliveryQtyItems.value = rows.map(r => ({
     ...r,
     deliveryQty: r.availableQty // 默认等于可发货最大数量
   }))
-  expectedDate.value = ''
+  deliveryExpectedDate.value = ''
   deliveryQtyVisible.value = true
 }
 
@@ -734,12 +693,12 @@ async function confirmDeliveryWithQty() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
       body: JSON.stringify({
-        expectedDate: expectedDate.value || undefined,
         items: validItems.map(r => ({
           orderDetailID: r.orderDetailID,
           orderCode: r.orderCode,
           deliveryQty: r.deliveryQty
         })),
+        expectedDate: deliveryExpectedDate.value || undefined,
         createByID: userInfo.userID || '',
         createByName: userInfo.userName || ''
       })
@@ -821,7 +780,6 @@ watch(() => route.path, () => {
           @confirm-detail="handleConfirmDetail"
           @generate-delivery="handleGenerateDelivery"
           @batch-delivery="handleBatchDelivery"
-          @batch-confirm="handleBatchConfirm"
         />
       </div>
     </div>
@@ -838,23 +796,22 @@ watch(() => route.path, () => {
     />
 
     <!-- 送货数量输入弹窗 -->
-    <el-dialog v-model="deliveryQtyVisible" title="生成送货单并发货" width="800px" align-center>
-      <div style="margin-bottom: 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-        <span style="font-size: 13px; color: #666;">
-          送货数量默认等于可发货最大数量，可修改为更小值支持分批送货。
-        </span>
-        <span style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:13px; color:#555;">
-          <b>预计送达时间：</b>
-          <el-date-picker
-            v-model="expectedDate"
-            type="date"
-            placeholder="请选择"
-            value-format="YYYY-MM-DD"
-            style="width:160px"
-            :disabled-date="disabledDate"
-          />
-        </span>
+    <el-dialog v-model="deliveryQtyVisible" title="填写送货数量" width="800px" align-center>
+      <div style="margin-bottom: 12px; font-size: 13px; color: #666;">
+        送货数量默认等于可发货最大数量，可修改为更小值支持分批送货。
       </div>
+      <div style="margin-bottom: 16px; display: flex; gap: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 13px; color: #666;">预计送达时间：</span>
+          <el-date-picker
+            v-model="deliveryExpectedDate"
+            type="date"
+            placeholder="请选择预计送达时间"
+            size="small"
+            style="width: 180px"
+          />
+          </div>
+        </div>
       <el-table :data="deliveryQtyItems" border size="small" style="width: 100%">
         <el-table-column prop="orderCode" label="订单编号" align="center" />
         <el-table-column prop="materialCode" label="物料编码" align="center" />
@@ -900,10 +857,10 @@ watch(() => route.path, () => {
 </template>
 
 <style scoped>
-.layout { display: flex; height: 100vh; overflow: hidden; }
-.main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
-.header { height: 60px; flex-shrink: 0; background: #fff; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
-.content { padding: 20px; flex: 1; min-width: 0; }
+.layout { display: flex; min-height: 100vh; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.header { height: 60px; background: #fff; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
+.content { padding: 20px; flex: 1; overflow-y: auto; }
 </style>
 <style>
 .delivery-qty-col .el-input-number .el-input__inner {

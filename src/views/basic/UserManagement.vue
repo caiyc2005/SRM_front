@@ -122,15 +122,7 @@ const checkedRoles = ref([])
 async function loadRoles() {
   try {
     const res = await apiGet('GetRoles')
-    if (res.success && res.data?.length) {
-      const order = ['admin','管理员','超级管理员','purchase','采购员','supplier','供应商','whclerk','仓管员','仓库管理员']
-      roles.value = res.data.sort((a, b) => {
-        const ia = order.indexOf(a.roleName)
-        const ib = order.indexOf(b.roleName)
-        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
-      })
-      return
-    }
+    if (res.success && res.data?.length) { roles.value = res.data; return }
   } catch { /* 降级 */ }
 }
 
@@ -147,7 +139,7 @@ function getUserRoleIds(userId) {
 
 function getRoleName(roleId) {
   const r = roles.value.find(item => (item.roleId || item.roleID) === roleId)
-  return r ? (r.memo || r.roleName) : roleId
+  return r ? r.roleName : roleId
 }
 
 function openAssignDialog(user) {
@@ -254,8 +246,9 @@ onMounted(() => { loadUsers(); loadRoles(); loadUserRoles() })
       <p style="margin-bottom: 16px; color: #333;">为 <strong>{{ assignTargetUser?.userName }}</strong> 分配角色：</p>
       <el-checkbox-group v-model="checkedRoles">
         <el-checkbox v-for="r in roles" :key="r.roleId || r.roleID" :label="r.roleId || r.roleID" :disabled="r.isDel" style="display: flex; margin-bottom: 10px;">
-          <span>{{ r.memo || r.roleName }}<span v-if="r.memo" style="color:#999;margin-left:4px;font-size:12px;">({{ r.roleName }})</span></span>
+          {{ r.roleName }}
           <el-tag v-if="r.isDel" size="small" type="danger" style="margin-left: 8px;">已停用</el-tag>
+          <span v-if="!r.isDel && r.memo" style="color: #999; margin-left: 8px; font-size: 12px;">（{{ r.memo }}）</span>
         </el-checkbox>
       </el-checkbox-group>
       <p v-if="roles.length === 0" style="color: #999; text-align: center;">暂无可用角色，请先添加角色</p>

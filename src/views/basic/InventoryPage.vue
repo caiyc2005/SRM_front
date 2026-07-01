@@ -12,7 +12,6 @@ const list = ref([])
 const loading = ref(false)
 const keyword = ref('')
 const wareFilter = ref('')
-const warehouses = ref([])
 
 // ==================== 加载库存 ====================
 async function loadData() {
@@ -37,20 +36,16 @@ async function loadData() {
   loading.value = false
 }
 
-// ==================== 仓库列表（从仓库API加载） ====================
-async function loadWarehouses() {
-  try {
-    const token = localStorage.getItem('token')
-    const res = await fetch('/api/Warehouse/GetAllWarehouse', {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    })
-    const text = await res.text()
-    const result = text ? JSON.parse(text) : {}
-    if (result.success && result.data?.length) {
-      warehouses.value = result.data
+// ==================== 仓库列表（从数据中提取） ====================
+const warehouses = computed(() => {
+  const map = new Map()
+  for (const item of list.value) {
+    if (!map.has(item.wareID)) {
+      map.set(item.wareID, { wareID: item.wareID, wareCode: item.wareCode, wareName: item.wareName })
     }
-  } catch { /* 静默失败 */ }
-}
+  }
+  return Array.from(map.values())
+})
 
 // ==================== 筛选 ====================
 const filteredList = computed(() => {
@@ -72,7 +67,6 @@ const filteredList = computed(() => {
 // ==================== 生命周期 ====================
 onMounted(() => {
   loadData()
-  loadWarehouses()
 })
 </script>
 
@@ -106,7 +100,7 @@ onMounted(() => {
                 <el-option
                   v-for="w in warehouses"
                   :key="w.wareID"
-                  :label="w.name || w.wareName"
+                  :label="w.wareName"
                   :value="w.wareID"
                 />
               </el-select>

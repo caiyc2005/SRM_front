@@ -6,7 +6,6 @@
  * 样式参考移动端卡片式布局，API 与收料操作一致
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 
@@ -27,19 +26,7 @@ const selectedWareID = ref('')
 const fieldErrors = ref({})
 const submitting = ref(false)
 const submitted = ref(false)
-const router = useRouter()
 const userName = ref('')
-
-function handleLogout() {
-  ElMessageBox.confirm('确认要退出登录吗？', '退出登录', {
-    type: 'info', confirmButtonText: '确认退出', cancelButtonText: '取消'
-  }).then(() => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('userInfo')
-    localStorage.removeItem('userRoles')
-    router.push('/login')
-  }).catch(() => {})
-}
 
 // 待收订单
 const pendingOrders = ref([])
@@ -117,8 +104,6 @@ async function loadPendingOrders() {
     if (result.code === 200 && result.data?.items?.length) {
       pendingOrders.value = result.data.items
         .filter(item => {
-          // 已收货的不在待收列表显示
-          if (String(item.status ?? 0) === '2') return false
           // 过滤掉已全部收完的（无明细时保留，视为可收料）
           const hasDetails = item.details && item.details.length > 0
           if (!hasDetails) return true
@@ -257,24 +242,31 @@ async function handleSearch() {
         expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
         createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
         status: String(item.status ?? 0),
-        materials: (item.details || []).map((dd, i) => ({
-          index: i + 1,
-          materialCode: dd.materialCode,
-          materialName: dd.materialName || '',
-          spec: dd.spec || '',
-          unit: dd.unit || '',
-          quantity: dd.quantity,
-          historyReceived: dd.receivedQty || 0,
-          remaining: Math.max(0, dd.quantity - (dd.receivedQty || 0)),
-          receivedQty: 0,
-          remark: ''
-        }))
+        materials: (item.details || [])
+          .filter(dd => (dd.receivedQty || 0) < dd.quantity)
+          .map((dd, i) => ({
+            index: i + 1,
+            materialCode: dd.materialCode,
+            materialName: dd.materialName || '',
+            spec: dd.spec || '',
+            unit: dd.unit || '',
+            quantity: dd.quantity,
+            historyReceived: dd.receivedQty || 0,
+            remaining: Math.max(0, dd.quantity - (dd.receivedQty || 0)),
+            receivedQty: 0,
+            remark: ''
+          }))
       }
       receiveFormItems.value = foundDelivery.value.materials.map(m => ({
         ...m,
-        receivedQty: m.remaining,
-        orderCode: foundDelivery.value.orderCode
+        receivedQty: m.remaining
       }))
+      if (receiveFormItems.value.length === 0) {
+        ElMessage.warning('该送货单所有物料已全部收完，不可重复收料')
+        foundDelivery.value = null
+        receiveFormItems.value = []
+        submitted.value = false
+      }
       return
     }
     notFound.value = true
@@ -493,14 +485,10 @@ async function handleSubmit() {
 
     if (result.code === 200) {
       ElMessage.success('收货确认成功！')
-      handleClearSearch()
-      loadPendingOrders()
+      submitted.value = true
       return
     }
-    ElMessageBox.alert(result.message || '收货失败', '收料失败', {
-      type: 'error',
-      confirmButtonText: '知道了'
-    })
+    ElMessage.error(result.message || '收货失败')
   } catch {
     ElMessage.error('后端接口不可用，收货失败')
   } finally {
@@ -690,7 +678,6 @@ onMounted(() => {
           <span class="operator-card__label">操作员</span>
           <span class="operator-card__name">{{ userName || '—' }}</span>
         </div>
-        <button class="header-btn" @click="handleLogout">退出</button>
       </div>
     </header>
 
@@ -845,7 +832,6 @@ onMounted(() => {
           >
             <div class="detail-card__head">
               <div class="detail-card__title-block">
-                <span class="detail-card__code" style="font-size:11px;color:#1890ff;">{{ item.orderCode }}</span>
                 <span class="detail-card__name">{{ item.materialName }}</span>
                 <span class="detail-card__code">{{ item.materialCode }}</span>
               </div>

@@ -6,7 +6,7 @@
  *       Tab2：收料记录查询
  *       Tab3：待收料列表
  */
-import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ExcelJS from 'exceljs'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -23,7 +23,6 @@ const useApi = ref(false)
 
 // ==================== Tab 控制 ====================
 const activeTab = ref('receive')
-const loadedTabs = { receive: false, history: false, pending: false }
 
 // ==================== 数据 ====================
 const allDeliveries = ref([])
@@ -94,19 +93,21 @@ async function handleSearch() {
         expectDate: item.expectedDate ? item.expectedDate.slice(0, 10) : '',
         createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
         status: String(item.status ?? 0),
-        materials: (item.details || []).map((dd, i) => ({
-          index: i + 1,
-          orderCode: dd.orderCode || '',
-          materialCode: dd.materialCode,
-          materialName: dd.materialName || '',
-          spec: dd.spec || '',
-          unit: dd.unit || '',
-          quantity: dd.quantity,
-          historyReceived: dd.receivedQty || 0,
-          remaining: Math.max(0, dd.quantity - (dd.receivedQty || 0)),
-          receivedQty: 0,
-          remark: ''
-        }))
+        materials: (item.details || [])
+          .filter(dd => (dd.receivedQty || 0) < dd.quantity)
+          .map((dd, i) => ({
+            index: i + 1,
+            orderCode: dd.orderCode || '',
+            materialCode: dd.materialCode,
+            materialName: dd.materialName || '',
+            spec: dd.spec || '',
+            unit: dd.unit || '',
+            quantity: dd.quantity,
+            historyReceived: dd.receivedQty || 0,
+            remaining: Math.max(0, dd.quantity - (dd.receivedQty || 0)),
+            receivedQty: 0,
+            remark: ''
+          }))
       }
       receiveFormItems.value = foundDelivery.value.materials.map(m => ({
         ...m,
@@ -199,6 +200,11 @@ async function handleConfirmReceive() {
       return
     }
   }
+  const hasReceived = items.some(i => Number(i.receivedQty) > 0)
+  if (!hasReceived) {
+    ElMessage.warning('收料总数不能为零，至少需要一项物料有收料数量')
+    return
+  }
 
   // 如果送货单状态为"未发货"（status=0），需额外二次确认
   if (delivery.status === '0') {
@@ -245,7 +251,7 @@ async function handleConfirmReceive() {
           wareID: selectedWareID.value,
           receiveUserID: userInfo.userID || '',
           receiveUserName: userInfo.userName || '仓管员',
-          details: items.map(i => ({
+          details: items.filter(i => Number(i.receivedQty) > 0).map(i => ({
             materialCode: i.materialCode,
             receivedQty: Number(i.receivedQty)
           }))
@@ -265,11 +271,7 @@ async function handleConfirmReceive() {
         loadReceiveRecords()
         return
       }
-      ElMessageBox.alert(result.message || '后端收货失败', '收料失败', {
-        type: 'error',
-        confirmButtonText: '知道了'
-      })
-      return  // 后端返回错误，不走降级逻辑
+      ElMessage.error(result.message || '后端收货失败，尝试本地记录')
     } catch {
       ElMessage.warning('后端不可用，已保存到本地记录')
     }
@@ -403,8 +405,7 @@ async function loadReceiveRecords() {
           unit: d.unit || '',
           planQty: d.planQty,
           receivedQty: d.receivedQty,
-          diffQty: d.diffQty,
-          orderCode: d.orderCode || r.orderCode || ''
+          diffQty: d.diffQty
         }))
         return {
           recordId: r.receiveID,
@@ -538,10 +539,8 @@ async function loadPendingOrders() {
         createTime: item.createdTime ? item.createdTime.replace('T', ' ').slice(0, 16) : '',
         deliveryNo: item.noteCode || '',
         noteCode: item.noteCode || '',
-        orderCode: '',
         materials: (item.details || []).map((dd, i) => ({
           index: i + 1,
-          orderCode: dd.orderCode || '',
           materialCode: dd.materialCode || '',
           materialName: dd.materialName || '',
           spec: dd.spec || '',
@@ -881,20 +880,9 @@ async function handlePendingExport() {
 // ==================== 生命周期 ====================
 onMounted(() => {
   loadSuppliers()
+  loadReceiveRecords()
+  loadPendingOrders()
   loadWarehouses()
-  loadedTabs.receive = true
-})
-
-// 按需加载：点击 Tab 时才请求对应数据
-watch(activeTab, (tab) => {
-  if (tab === 'history' && !loadedTabs.history) {
-    loadedTabs.history = true
-    loadReceiveRecords()
-  }
-  if (tab === 'pending' && !loadedTabs.pending) {
-    loadedTabs.pending = true
-    loadPendingOrders()
-  }
 })
 </script>
 
@@ -910,6 +898,9 @@ watch(activeTab, (tab) => {
 
       <div class="content">
         <el-card shadow="never">
+          <el-tabs v-model="activeTab">
+            <!-- ==================== Tab1：收料操作 ==================== -->
+            <el-tab-pane label="收料操作" name="receive">
               <!-- 搜索栏 -->
               <div class="search-card">
                 <div class="search-row">
@@ -1072,7 +1063,187 @@ watch(activeTab, (tab) => {
                 v-if="!foundDelivery && !notFound"
                 description="请扫描送货单条形码或输入送货单号查询"
               />
+            </el-tab-pane>
 
+            <!-- ==================== Tab2：收料记录 ==================== -->
+            <el-tab-pane label="收料记录" name="history">
+              <div class="history-search">
+                <el-input
+                  v-model="historyKeyword"
+                  placeholder="搜索送货单号 / 收料单号 / 订单号 / 供应商"
+                  clearable
+                  size="default"
+                  style="width: 360px"
+                  @input="historyQuery.pageNum = 1"
+                  @keyup.enter="handleHistoryQuery"
+                >
+                  <template #prefix>
+                    <el-icon><Search /></el-icon>
+                  </template>
+                </el-input>
+                <el-date-picker
+                  v-model="historyQuery.dateRange"
+                  type="daterange"
+                  range-separator="至"
+                  start-placeholder="收料开始日期"
+                  end-placeholder="收料结束日期"
+                  value-format="YYYY-MM-DD"
+                  style="width: 280px"
+                  clearable
+                  @change="historyQuery.pageNum = 1"
+                />
+                <el-button type="primary" @click="handleHistoryQuery">查询</el-button>
+                <el-button @click="handleHistoryReset">重置</el-button>
+                <el-button type="success" @click="handleHistoryExport">
+                  <el-icon><Download /></el-icon> 导出Excel
+                </el-button>
+              </div>
+
+              <div class="table-header">
+                <span>收料记录列表</span>
+                <span>共 {{ filteredHistoryRecords.length }} 条</span>
+              </div>
+
+              <el-empty
+                v-if="filteredHistoryRecords.length === 0"
+                description="暂无收料记录"
+              />
+
+              <template v-else>
+                <el-table ref="historyTableRef" :data="historyTableData" stripe border style="width: 100%" @row-click="handleHistoryRowClick">
+                  <el-table-column type="expand">
+                    <template #default="{ row }">
+                      <div class="detail-content">
+                        <div class="detail-title">收料明细</div>
+                        <el-table :data="row.items" size="small" border style="width: 100%">
+                          <el-table-column type="index" label="序号" width="60" align="center" />
+                          <el-table-column label="采购单号" width="160" align="center">
+                            <template #default>
+                              {{ row.orderCode }}
+                            </template>
+                          </el-table-column>
+                          <el-table-column prop="materialCode" label="物料编码" width="120" align="center" />
+                          <el-table-column prop="materialName" label="物料名称" min-width="140" />
+                          <el-table-column prop="spec" label="规格" width="110" align="center" />
+                          <el-table-column prop="unit" label="单位" width="70" align="center" />
+                          <el-table-column prop="planQty" label="计划数量" width="100" align="center" />
+                          <el-table-column prop="receivedQty" label="实收数量" width="100" align="center" />
+                          <el-table-column label="差异" width="80" align="center">
+                            <template #default="{ row: r }">
+                              <el-tag
+                                :type="r.diffQty === 0 ? 'success' : 'warning'"
+                                size="small"
+                              >
+                                {{ r.diffQty }}
+                              </el-tag>
+                            </template>
+                          </el-table-column>
+                        </el-table>
+                      </div>
+                    </template>
+                  </el-table-column>
+
+                  <el-table-column prop="recordCode" label="收料单号" width="180" align="center" />
+                  <el-table-column prop="noteCode" label="送货单号" width="180" align="center" />
+                  <el-table-column prop="supplierName" label="供应商" min-width="160" />
+                  <el-table-column prop="totalPlanQty" label="计划总数" width="100" align="center" />
+                  <el-table-column prop="totalReceivedQty" label="实收总数" width="100" align="center" />
+                  <el-table-column label="差异" width="80" align="center">
+                    <template #default="{ row }">
+                      <el-tag
+                        :type="row.totalDiffQty === 0 ? 'success' : 'warning'"
+                        size="small"
+                      >
+                        {{ row.totalDiffQty }}
+                      </el-tag>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="operator" label="操作员" width="100" align="center" />
+                  <el-table-column prop="receiveDate" label="收料时间" width="170" align="center" />
+                </el-table>
+
+                <AppPagination
+                  :total="filteredHistoryRecords.length"
+                  :query="historyQuery"
+                  @change="handleHistoryPageChange"
+                />
+              </template>
+            </el-tab-pane>
+
+            <!-- ==================== Tab3：待收料 ==================== -->
+            <el-tab-pane label="待收料" name="pending">
+              <AppFilter :fields="pendingFilterFields" :model="pendingQuery" @query="handlePendingQuery" @reset="handlePendingReset">
+                <template #buttons>
+                  <el-button type="success" @click="handlePendingExport">
+                    <el-icon><Download /></el-icon> 导出Excel
+                  </el-button>
+                </template>
+              </AppFilter>
+
+              <div class="table-header">
+                <span>待收料列表</span>
+                <span>共 {{ pendingTotal }} 条</span>
+              </div>
+
+              <el-table
+                ref="tableRef"
+                :data="pendingTableData"
+                row-key="orderID"
+                stripe
+                border
+                style="width: 100%"
+                @row-click="handleRowClick"
+              >
+                <el-table-column type="expand">
+                  <template #default="{ row }">
+                    <div class="detail-content">
+                      <div class="detail-info">
+                        <div><span>订单编号：</span><b>{{ row.orderCode }}</b></div>
+                        <div><span>供应商：</span><b>{{ row.supplierName }}</b></div>
+                        <div><span>订单状态：</span><b>{{ getDeliveryStatusText(row.status) }}</b></div>
+                        <div><span>总金额：</span><b class="red-price">¥{{ row.totalAmount }}</b></div>
+                        <div><span>送货单号：</span><b style="color: #1890ff">{{ row.noteCode || '—' }}</b></div>
+                        <div><span>创建时间：</span><b>{{ row.createTime }}</b></div>
+                      </div>
+                      <el-table :data="row.materials" size="small" border style="width: 100%">
+                        <el-table-column prop="index" label="序号" width="60" align="center" />
+                        <el-table-column prop="materialCode" label="物料编码" width="120" align="center" />
+                        <el-table-column prop="materialName" label="物料名称" width="180" align="center" />
+                        <el-table-column prop="spec" label="规格" width="120" align="center" />
+                        <el-table-column prop="qty" label="采购数量" align="center" />
+                        <el-table-column prop="unit" label="单位" width="70" align="center" />
+                        <el-table-column prop="unitPrice" label="单价" align="center" />
+                        <el-table-column prop="amount" label="金额" align="center" />
+                      </el-table>
+                    </div>
+                  </template>
+                </el-table-column>
+
+                <el-table-column type="index" label="序号" width="60" align="center" />
+                <el-table-column prop="noteCode" label="送货单号" min-width="160" align="center">
+                  <template #default="{ row }">
+                    <span v-if="row.noteCode" style="color: #1890ff;">{{ row.noteCode }}</span>
+                    <span v-else style="color: #999;">—</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="orderCode" label="订单编号" min-width="150" align="center" />
+                <el-table-column prop="supplierName" label="供应商" min-width="160" align="center" />
+                <el-table-column prop="materialCount" label="物料种数" align="center" />
+                <el-table-column label="订单状态" width="100" align="center">
+                  <template #default="{ row }">
+                    <el-tag :type="getDeliveryStatusTag(row.status)" size="small">{{ getDeliveryStatusText(row.status) }}</el-tag>
+                  </template>
+                </el-table-column>
+                <!-- <el-table-column label="操作" width="120" align="center">
+                  <template #default="{ row }">
+                    <el-button type="success" size="small" @click.stop="handleReceive(row)">确认收料</el-button>
+                  </template>
+                </el-table-column> -->
+              </el-table>
+
+              <AppPagination :total="pendingTotal" :query="pendingQuery" @change="handlePendingPageChange" />
+            </el-tab-pane>
+          </el-tabs>
         </el-card>
       </div>
     </div>

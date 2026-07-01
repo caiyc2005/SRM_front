@@ -33,16 +33,7 @@ async function loadRoles() {
   roleLoading.value = true
   try {
     const res = await apiGet('GetRoles')
-    if (res.success && res.data?.length) {
-      // 按指定顺序排列：超级管理员 → 采购员 → 供应商 → 仓库管理员
-      const order = ['admin','管理员','超级管理员','purchase','采购员','supplier','供应商','whclerk','仓管员','仓库管理员']
-      roles.value = res.data.sort((a, b) => {
-        const ia = order.indexOf(a.roleName)
-        const ib = order.indexOf(b.roleName)
-        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
-      })
-      roleLoading.value = false; return
-    }
+    if (res.success && res.data?.length) { roles.value = res.data; roleLoading.value = false; return }
   } catch { /* 降级 */ }
   roleLoading.value = false
 }
@@ -54,7 +45,6 @@ function openAddRole() {
 
 async function submitRole() {
   if (!roleForm.roleName.trim()) { ElMessage.warning('角色名称不能为空'); return }
-  if (!roleForm.memo.trim()) { ElMessage.warning('中文名不能为空'); return }
   try {
     const res = await apiPost('AddRole', { roleName: roleForm.roleName, memo: roleForm.memo })
     if (res.success) { ElMessage.success('角色添加成功'); roleFormVisible.value = false; await loadRoles(); return }
@@ -158,11 +148,7 @@ onMounted(() => { loadRoles(); loadUsers(); loadUserRoles() })
             <el-button type="primary" @click="openAddRole"><el-icon><Plus /></el-icon> 添加角色</el-button>
           </div>
           <el-table :data="roles" v-loading="roleLoading" stripe border style="width: 100%">
-            <el-table-column label="角色名称（英文）" min-width="160">
-              <template #default="{ row }">
-                <span>{{ row.memo || row.roleName }}<span v-if="row.memo" style="color:#999;margin-left:6px;font-size:12px;">({{ row.roleName }})</span></span>
-              </template>
-            </el-table-column>
+            <el-table-column prop="roleName" label="角色名称" min-width="160" />
             <el-table-column label="状态" width="80" align="center">
               <template #default="{ row }"><el-tag :type="row.isDel ? 'danger' : 'success'" size="small">{{ row.isDel ? '禁用' : '启用' }}</el-tag></template>
             </el-table-column>
@@ -178,10 +164,10 @@ onMounted(() => { loadRoles(); loadUsers(); loadUserRoles() })
       </div>
     </div>
 
-    <el-dialog title="添加角色" v-model="roleFormVisible" width="520px" :close-on-click-modal="false">
+    <el-dialog title="添加角色" v-model="roleFormVisible" width="420px" :close-on-click-modal="false">
       <el-form label-width="80px" label-position="left">
-        <el-form-item label="角色名称" required><el-input v-model="roleForm.roleName" placeholder="如 admin、purchase【建议是英文！】" /></el-form-item>
-        <el-form-item label="中文名" required><el-input v-model="roleForm.memo" placeholder="请输入中文名" /></el-form-item>
+        <el-form-item label="角色名称" required><el-input v-model="roleForm.roleName" placeholder="请输入角色名称" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="roleForm.memo" type="textarea" :rows="3" placeholder="可选备注信息" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="roleFormVisible = false">取消</el-button>

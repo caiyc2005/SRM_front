@@ -17,12 +17,13 @@ const props = defineProps({
   detailAction: { type: String, default: 'confirm' }
 })
 
-const emit = defineEmits(['pageChange', 'confirm', 'confirmDetail', 'generateDelivery', 'batchDelivery', 'batchConfirm'])
+const emit = defineEmits(['pageChange', 'confirm', 'confirmDetail', 'generateDelivery', 'batchDelivery'])
 
 const tableRef = ref(null)
 const selectedRows = ref([])
 
 function onSelectionChange(rows) {
+  if (props.detailAction !== 'delivery') return
   selectedRows.value = rows
 }
 
@@ -31,20 +32,11 @@ function handleBatchDelivery() {
   emit('batchDelivery', [...selectedRows.value])
 }
 
-function handleBatchConfirm() {
-  if (selectedRows.value.length === 0) return
-  emit('batchConfirm', [...selectedRows.value])
-}
-
-function handleRowClick(row, column, event) {
+function handleRowClick(row) {
   if (!tableRef.value) return
-  // 有选择框的模式：点击行也切换选中（但排除点击复选框本身，避免双重切换）
-  if (props.detailAction === 'delivery' || props.detailAction === 'confirm') {
-    // 如果点击的是复选框内部，不处理（Element Plus 已处理）
-    if (event?.target?.closest('.el-checkbox')) return
-    // 已生成送货单或已确认的不可选中
-    if (props.detailAction === 'delivery' && row.detailStatus === '2') return
-    if (props.detailAction === 'confirm' && row.detailStatus !== '0') return
+  // 待发货模式：点击行切换选中（已生成送货单的不可选中）
+  if (props.detailAction === 'delivery') {
+    if (row.detailStatus === '2') return
     tableRef.value.toggleRowSelection(row)
     return
   }
@@ -61,11 +53,7 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
       <span>
         <el-button v-if="detailMode && detailAction === 'delivery'" type="success" size="small"
           :disabled="selectedRows.length === 0" @click="handleBatchDelivery">
-          生成送货单并发货 ({{ selectedRows.length }})
-        </el-button>
-        <el-button v-if="detailMode && detailAction === 'confirm'" type="primary" size="small"
-          :disabled="selectedRows.length === 0" @click="handleBatchConfirm">
-          确认采购明细 ({{ selectedRows.length }})
+          生成送货单 ({{ selectedRows.length }})
         </el-button>
         <span style="margin-left: 10px;">共 {{ total }} 条记录</span>
       </span>
@@ -76,8 +64,8 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
       style="width: 100%" show-overflow-tooltip
       @row-click="handleRowClick"
       @selection-change="onSelectionChange">
-      <el-table-column v-if="detailAction === 'delivery' || detailAction === 'confirm'" type="selection" width="40" align="center"
-        :selectable="(row) => detailAction === 'confirm' ? row.detailStatus === '0' : row.detailStatus !== '2'" />
+      <el-table-column v-if="detailAction === 'delivery'" type="selection" width="40" align="center"
+        :selectable="(row) => row.detailStatus !== '2'" />
       <el-table-column prop="orderCode" label="订单编号" min-width="120" align="center" />
       <el-table-column v-if="!isSupplier" prop="supplierName" label="供应商名称" min-width="110" align="center" />
       <el-table-column prop="materialCode" label="物料编码" min-width="100" align="center" />
@@ -158,14 +146,14 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
         </template>
       </el-table-column>
 
-      <el-table-column prop="orderCode" label="订单编号" min-width="140" align="center" resizable="false" />
-      <el-table-column v-if="!isSupplier" prop="supplierName" label="供应商名称" min-width="150" align="center" resizable="false" />
+      <el-table-column prop="orderCode" label="订单编号" width="160" align="center" resizable="false" />
+      <el-table-column v-if="!isSupplier" prop="supplierName" label="供应商名称" min-width="180" align="center" resizable="false" />
 
-      <el-table-column prop="materialCount" label="物料种类" min-width="80" align="center" resizable="false" />
-      <el-table-column prop="totalAmount" label="总金额(元)" min-width="120" align="center" class-name="red-price" resizable="false" />
-      <el-table-column prop="createTime" label="创建时间" min-width="140" align="center" resizable="false" />
+      <el-table-column prop="materialCount" label="物料种类" width="90" align="center" resizable="false" />
+      <el-table-column prop="totalAmount" label="总金额(元)" width="130" align="center" class-name="red-price" resizable="false" />
+      <el-table-column prop="createTime" label="创建时间" width="160" align="center" resizable="false" />
       <!-- 订单状态 -->
-      <el-table-column v-if="!hideStatus" label="订单状态" min-width="80" align="center" resizable="false">
+      <el-table-column v-if="!hideStatus" label="订单状态" width="100" align="center" resizable="false">
         <template #default="scope">
           <el-tag :type="getStatusTag(scope.row.status)" size="small">
             {{ getStatusText(scope.row.status) }}
@@ -174,7 +162,7 @@ defineExpose({ clearSelection: () => tableRef.value?.clearSelection() })
       </el-table-column>
 
       <!-- 操作列 -->
-      <el-table-column v-if="actionType !== 'none'" label="操作" min-width="110" align="center" resizable="false">
+      <el-table-column v-if="actionType !== 'none'" label="操作" width="140" align="center" resizable="false">
         <template #default="scope">
           <template v-if="scope.row.status === '0'">
             <!-- 状态为0：表示未确认的订单 -->

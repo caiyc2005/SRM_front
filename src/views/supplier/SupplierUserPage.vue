@@ -9,13 +9,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import AppSidebar from '@/components/AppSidebar.vue'
 import Logout from '@/components/Logout.vue'
 
-const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]')
-const isAdmin = userRoles.some(r => r === '管理员' || r === 'admin')
 const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
-const noPermission = !userInfo.isMainAccount && !isAdmin
-
-const supplierList = ref([])
-const selectedSupplierID = ref('')
+const noPermission = !userInfo.isMainAccount
 
 const supplierUsers = ref([])
 const loadingUsers = ref(false)
@@ -33,46 +28,22 @@ function resetUserForm() {
   userForm.memo = ''
 }
 
-async function loadSuppliers() {
-  try {
-    const token = localStorage.getItem('token')
-    const res = await fetch('/api/Supplier/GetAllSuppliers', {
-      method: 'POST',
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    })
-    const text = await res.text()
-    const result = text ? JSON.parse(text) : {}
-    if (result.success && result.data?.length) {
-      supplierList.value = result.data
-    }
-  } catch { /* 降级 */ }
-}
-
 async function loadSupplierUsers() {
-  let sid = userInfo.supplierID
-  if (isAdmin) {
-    sid = selectedSupplierID.value
-    if (!sid) { supplierUsers.value = []; return }
-  }
-  if (!sid) { ElMessage.warning('无法获取供应商信息'); return }
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  if (!userInfo.supplierID) { ElMessage.warning('无法获取供应商信息'); return }
   loadingUsers.value = true
   try {
     const token = localStorage.getItem('token')
     const res = await fetch('/api/Supplier/GetSupplierUsers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
-      body: JSON.stringify({ supplierID: sid })
+      body: JSON.stringify({ supplierID: userInfo.supplierID })
     })
     const text = await res.text()
     const result = text ? JSON.parse(text) : {}
     supplierUsers.value = (result.success && Array.isArray(result.data)) ? result.data : []
   } catch { supplierUsers.value = [] }
   finally { loadingUsers.value = false }
-}
-
-function handleSupplierChange(val) {
-  selectedSupplierID.value = val
-  loadSupplierUsers()
 }
 
 function openAddUser() {
@@ -86,13 +57,12 @@ async function submitAddUser() {
   addUserLoading.value = true
   try {
     const token = localStorage.getItem('token')
-    const sid = isAdmin ? selectedSupplierID.value : userInfo.supplierID
-    if (!sid) { ElMessage.warning('请选择供应商'); return }
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
     const res = await fetch('/api/Supplier/CreateSubAccount', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
       body: JSON.stringify({
-        supplierID: sid,
+        supplierID: userInfo.supplierID,
         userCode: userForm.userCode.trim(),
         userName: userForm.userName.trim(),
         memo: userForm.memo.trim()
@@ -128,11 +98,7 @@ async function submitAddUser() {
 }
 
 onMounted(() => {
-  if (isAdmin) {
-    loadSuppliers()
-  } else if (!noPermission) {
-    loadSupplierUsers()
-  }
+  if (!noPermission) loadSupplierUsers()
 })
 </script>
 
@@ -152,14 +118,9 @@ onMounted(() => {
         </div>
         <template v-else>
         <el-card shadow="never">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-weight: bold; color: #333; font-size: 15px;">子用户列表</span>
-              <el-select v-if="isAdmin" v-model="selectedSupplierID" placeholder="请选择供应商" style="width: 240px;" @change="handleSupplierChange">
-                <el-option v-for="s in supplierList" :key="s.supplierID" :label="s.supplierName" :value="s.supplierID" />
-              </el-select>
-            </div>
-            <el-button type="primary" size="small" :disabled="isAdmin && !selectedSupplierID" @click="openAddUser">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <span style="font-weight: bold; color: #333; font-size: 15px;">子用户列表</span>
+            <el-button type="primary" size="small" @click="openAddUser">
               <el-icon><Plus /></el-icon> 新增子用户
             </el-button>
           </div>

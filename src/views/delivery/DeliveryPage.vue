@@ -288,7 +288,7 @@ watch(
 
     <div class="main">
       <div class="header">
-        <h3>送货单一览表</h3>
+        <h3>送货单管理</h3>
         <Logout />
       </div>
 

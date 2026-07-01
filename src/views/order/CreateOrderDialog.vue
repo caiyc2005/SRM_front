@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
 const emit = defineEmits(['update:visible', 'addMaterial', 'removeMaterial', 'submit'])
 
@@ -11,30 +11,16 @@ const props = defineProps({
 })
 
 // 供应商筛选
-const supplierSearch = ref('')
-const filteredSuppliers = ref([])
-
-watch(() => props.supplierList, (list) => {
-  const q = supplierSearch.value
-  if (!q) {
-    filteredSuppliers.value = [...list]
-  } else {
-    const lower = q.toLowerCase()
-    filteredSuppliers.value = list.filter(
-      s => s.supplierName?.toLowerCase().includes(lower) || s.supplierCode?.toLowerCase().includes(lower)
-    )
-  }
-}, { immediate: true })
+const filteredSuppliers = ref([...props.supplierList])
 
 function filterSupplier(query) {
-  supplierSearch.value = query
   if (!query) {
     filteredSuppliers.value = [...props.supplierList]
     return
   }
   const q = query.toLowerCase()
   filteredSuppliers.value = props.supplierList.filter(
-    s => s.supplierName?.toLowerCase().includes(q) || s.supplierCode?.toLowerCase().includes(q)
+    s => s.supplierName.toLowerCase().includes(q) || s.supplierCode.toLowerCase().includes(q)
   )
 }
 
