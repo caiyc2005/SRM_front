@@ -343,9 +343,9 @@ function handleQtyOverLimit(val, index) {
         showCancelButton: false
       }
     ).then(() => {
-      receiveFormItems.value[index].receivedQty = item.remaining
+      // 数值已在 updateQty 中同步复位，此处仅作提示
     }).catch(() => {
-      receiveFormItems.value[index].receivedQty = item.remaining
+      // 忽略关闭弹窗
     })
   }
 }
@@ -356,8 +356,8 @@ function updateQty(index, value) {
   if (!item) return
   const numVal = Number(value) || 0
 
-  // 检测超限 → 弹窗警告并复位
   if (numVal > item.remaining) {
+    receiveFormItems.value[index].receivedQty = item.remaining
     handleQtyOverLimit(numVal, index)
     return
   }
@@ -368,6 +368,39 @@ function updateQty(index, value) {
     const newErrors = { ...fieldErrors.value }
     delete newErrors[materialCode]
     fieldErrors.value = newErrors
+  }
+}
+
+/** @input 事件：检测超限时同步修正 DOM 值，避免 Vue 因值相同跳过 patch */
+function onInputChange(index, event) {
+  const item = receiveFormItems.value[index]
+  if (!item) return
+  const numVal = Number(event.target.value) || 0
+
+  if (numVal > item.remaining) {
+    event.target.value = item.remaining        // 直接修正 DOM
+    receiveFormItems.value[index].receivedQty = item.remaining  // 同步响应式数据
+    handleQtyOverLimit(numVal, index)
+    return
+  }
+
+  receiveFormItems.value[index].receivedQty = numVal
+  if (fieldErrors.value[item.materialCode]) {
+    const newErrors = { ...fieldErrors.value }
+    delete newErrors[item.materialCode]
+    fieldErrors.value = newErrors
+  }
+}
+
+/** @blur 事件：仅做数值收拢（如 0 值覆盖空串） */
+function onBlur(index) {
+  const item = receiveFormItems.value[index]
+  if (!item) return
+  const numVal = Number(item.receivedQty) || 0
+  if (numVal > item.remaining) {
+    receiveFormItems.value[index].receivedQty = item.remaining
+  } else {
+    receiveFormItems.value[index].receivedQty = numVal
   }
 }
 
@@ -842,8 +875,8 @@ onMounted(() => {
                     :min="0"
                     :max="item.remaining"
                     :disabled="submitted"
-                    @input="updateQty(index, Number($event.target.value) || 0)"
-                    @blur="updateQty(index, Number(item.receivedQty) || 0)"
+                    @input="onInputChange(index, $event)"
+                    @blur="onBlur(index)"
                   />
                   <button
                     class="qty-btn"
